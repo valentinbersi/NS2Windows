@@ -1,0 +1,106 @@
+:root {
+  --bg-color: #000000;
+  --bg-surface: #111111;
+  --bg-surface-hover: #1a1a1a;
+  --text-color: #ffffff;
+  --text-muted: #888888;
+  --border-color: #333333;
+  --accent-color: #ffffff;
+  --accent-hover: #dddddd;
+  --danger-color: #ff4444;
+  --danger-hover: #ff6666;
+  
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  color-scheme: dark;
+  color: var(--text-color);
+  background-color: var(--bg-color);
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Common form elements */
+input, select, button {
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text-color);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+input:focus, select:focus {
+  border-color: var(--accent-color);
+}
+
+button {
+  cursor: pointer;
+  background: var(--bg-surface);
+  color: var(--text-color);
+}
+
+button:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--text-muted);
+}
+
+button.primary {
+  background: var(--accent-color);
+  color: var(--bg-color);
+  border-color: var(--accent-color);
+  font-weight: 500;
+}
+
+button.primary:hover {
+  background: var(--accent-hover);
+}
+
+button.danger {
+  color: var(--danger-color);
+  border-color: var(--border-color);
+}
+
+button.danger:hover {
+  background: rgba(255, 68, 68, 0.1);
+  border-color: var(--danger-color);
+}
