@@ -1,8 +1,10 @@
 use crate::communication::communicator::LedPatten;
 use crate::connection::connected_controller::{
-    ConnectedController, ConnectedDualJoyCon, ConnectedNsoProController, ConnectedSingleJoyCon,
+    ConnectedController, ConnectedDualJoyCon, ConnectedNsoGcController, ConnectedProController,
+    ConnectedSingleJoyCon,
 };
-use crate::connection::joycon_side::JoyConSide;
+use crate::connection::joy_con_side::JoyConSide;
+use crate::connection::motion_source::MotionSource;
 use crate::dtos::connection::Connection;
 use crate::dtos::controller_kind::ControllerKind;
 use crate::state::AppState;
@@ -38,6 +40,7 @@ async fn connect_dual_joy_con(
     let connected_controller = Arc::new(ConnectedController::DualJoyCon(ConnectedDualJoyCon {
         left,
         right,
+        motion_source: MotionSource::Right,
     }));
 
     Ok(connected_controller)
@@ -66,8 +69,11 @@ async fn connect_single_controller(
             device,
             joy_con_side: JoyConSide::Right,
         }),
-        ControllerKind::ProNsoGcController => {
-            ConnectedController::NsoGcProController(ConnectedNsoProController { device })
+        ControllerKind::ProController => {
+            ConnectedController::ProController(ConnectedProController { device })
+        }
+        ControllerKind::NsoGcController => {
+            ConnectedController::NsoGcController(ConnectedNsoGcController { device })
         }
         _ => return Err("Invalid State".to_string()),
     };
@@ -186,7 +192,36 @@ pub async fn connect_controller(
                 .map_err(|err| err.to_string())?;
         }
 
-        ConnectedController::NsoGcProController(controller) => {
+        ConnectedController::ProController(controller) => {
+            controller
+                .device
+                .peripheral
+                .subscribe(&controller.device.input_char)
+                .await
+                .map_err(|err| err.to_string())?;
+
+            state
+                .communicator
+                .send_custom_command(&controller.device)
+                .await
+                .map_err(|err| err.to_string())?;
+
+            sleep(Duration::from_millis(200)).await;
+
+            state
+                .communicator
+                .set_device_led(&controller.device, LedPatten::Led1)
+                .await
+                .map_err(|err| err.to_string())?;
+
+            state
+                .communicator
+                .emit_sound(&controller.device)
+                .await
+                .map_err(|err| err.to_string())?;
+        }
+
+        ConnectedController::NsoGcController(controller) => {
             controller
                 .device
                 .peripheral
@@ -234,7 +269,8 @@ pub async fn get_connections(state: State<'_, AppState>) -> Result<Vec<Connectio
                     JoyConSide::Right => ControllerKind::RightJoyCon,
                 },
                 ConnectedController::DualJoyCon(_) => ControllerKind::DualJoyCons,
-                ConnectedController::NsoGcProController(_) => ControllerKind::ProNsoGcController,
+                ConnectedController::ProController(_) => ControllerKind::ProController,
+                ConnectedController::NsoGcController(_) => ControllerKind::NsoGcController,
             },
         })
         .collect())
@@ -268,7 +304,14 @@ pub async fn remove_connection(state: State<'_, AppState>, id: Uuid) -> Result<(
                     .map_err(|err| err.to_string())?
             }
 
-            ConnectedController::NsoGcProController(controller) => controller
+            ConnectedController::ProController(controller) => controller
+                .device
+                .peripheral
+                .disconnect()
+                .await
+                .map_err(|err| err.to_string())?,
+
+            ConnectedController::NsoGcController(controller) => controller
                 .device
                 .peripheral
                 .disconnect()
