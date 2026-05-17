@@ -1,10 +1,8 @@
-pub mod controller_data;
 pub mod input_data;
 pub mod motion_data;
 pub mod ns_input;
 pub mod output;
+pub mod output_data;
 pub mod profile_kind;
-pub mod ps4_controller_data;
 pub mod stick_data;
 pub mod trigger_data;
-pub mod xbox360_controller_data;

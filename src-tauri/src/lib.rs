@@ -1,4 +1,5 @@
 use crate::commands::connections::{connect_controller, get_connections, remove_connection};
+use crate::commands::controllers::start_controllers;
 use crate::commands::profiles::{
     delete_profile, find_profile_by_name, profile_names, save_profile,
 };
@@ -12,6 +13,7 @@ use migration::{Migrator, MigratorTrait};
 use sea_orm::{Database, DbErr};
 use tauri::Manager as TManager;
 use tokio::sync::RwLock;
+use vigem_rust::Client;
 
 pub mod commands;
 pub mod communication;
@@ -21,15 +23,10 @@ pub mod decode;
 pub mod dtos;
 pub mod encode;
 pub mod entities;
+pub mod evaluation;
 pub mod profiles;
 pub mod repositories;
 pub mod state;
-
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() -> tauri::Result<()> {
@@ -43,6 +40,7 @@ pub fn run() -> tauri::Result<()> {
             connect_controller,
             get_connections,
             remove_connection,
+            start_controllers,
         ])
         .setup(|app| {
             let db = tauri::async_runtime::block_on(async {
@@ -60,11 +58,14 @@ pub fn run() -> tauri::Result<()> {
             })?
             .ok_or("No Bluetooth adapters found")?;
 
+            let vigem_client = Client::connect()?;
+
             app.manage(AppState {
                 profile_repository: ProfileRepository::new(db),
                 connector: BluetoothConnector::new(adapter),
                 communicator: BluetoothCommunicator,
                 connected_controllers: RwLock::new(hashmap!()),
+                vigem_client,
             });
 
             Ok(())
