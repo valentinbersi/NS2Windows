@@ -10,7 +10,10 @@ use crate::state::AppState;
 use btleplug::api::Manager as BManager;
 use maplit::hashmap;
 use migration::{Migrator, MigratorTrait};
-use sea_orm::{Database, DbErr};
+use sea_orm::Database;
+use std::error::Error;
+use std::fs;
+use std::fs::File;
 use tauri::Manager as TManager;
 use tokio::sync::RwLock;
 use vigem_rust::Client;
@@ -43,10 +46,23 @@ pub fn run() -> tauri::Result<()> {
             start_controllers,
         ])
         .setup(|app| {
+            let app_data_dir = app.path().app_data_dir()?;
+
+            if !app_data_dir.exists() {
+                fs::create_dir_all(&app_data_dir)?;
+            }
+
+            let db_path = app_data_dir.join("profiles.db");
+
+            if !db_path.exists() {
+                File::create(&db_path)?;
+            }
+
             let db = tauri::async_runtime::block_on(async {
-                let db = Database::connect("sqlite://app.db").await?;
+                let db =
+                    Database::connect(format!("sqlite://{}", db_path.to_string_lossy())).await?;
                 Migrator::up(&db, None).await?;
-                Ok::<sea_orm::DatabaseConnection, DbErr>(db)
+                Ok::<sea_orm::DatabaseConnection, Box<dyn Error>>(db)
             })?;
 
             let adapter = tauri::async_runtime::block_on(async {
