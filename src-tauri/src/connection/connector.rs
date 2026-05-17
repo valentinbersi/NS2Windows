@@ -5,6 +5,7 @@ use futures::StreamExt;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::timeout;
 use uuid::Uuid;
@@ -141,8 +142,8 @@ impl BluetoothConnector {
 
         Ok(ConnectedDevice {
             peripheral: device,
-            input_char,
-            write_char,
+            input_char: Arc::new(input_char),
+            write_char: Arc::new(write_char),
         })
     }
 }
