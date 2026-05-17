@@ -67,3 +67,6 @@ start the emulation process, running all defined controllers in the background t
 - Windows PC with Bluetooth capabilities.
 - [ViGEmBus](https://github.com/nefarius/ViGEmBus) driver installed (required for emulating Xbox 360 and PS4
   controllers).
+
+## Acknowledgments
+The decoding of Nintendo Switch 2 controller inputs in this project was mostly inspired by the work done in [TheFrano/joycon2cpp](https://github.com/TheFrano/joycon2cpp).
