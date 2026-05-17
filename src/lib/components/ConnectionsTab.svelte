@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { onMount, onDestroy } from "svelte";
-    import { invoke } from "@tauri-apps/api/core";
-    import { listen } from "@tauri-apps/api/event";
-    import type { UnlistenFn } from "@tauri-apps/api/event";
-    import { ControllerKind, CONTROLLER_KIND_LABELS } from "../types";
-    import type { Connection } from "../types";
+    import {onDestroy, onMount} from "svelte";
+    import {invoke} from "@tauri-apps/api/core";
+    import type {UnlistenFn} from "@tauri-apps/api/event";
+    import {listen} from "@tauri-apps/api/event";
+    import type {Connection} from "../types";
+    import {CONTROLLER_KIND_LABELS, ControllerKind} from "../types";
 
     import JoyConLeftIcon from "./icons/JoyConLeftIcon.svelte";
     import JoyConRightIcon from "./icons/JoyConRightIcon.svelte";
@@ -18,7 +18,7 @@
     let isConnecting = false;
     let selectedKind: ControllerKind | null = null;
     let waitingFor: ControllerKind | null = null;
-    
+
     let unlistenWaiting: UnlistenFn | null = null;
     let unlistenFinishing: UnlistenFn | null = null;
 
@@ -34,7 +34,7 @@
 
     onMount(async () => {
         await loadConnections();
-        
+
         // Set up listeners for the connection flow
         unlistenWaiting = await listen<ControllerKind>("waiting_connection", (event) => {
             waitingFor = event.payload;
@@ -61,7 +61,7 @@
     async function removeConnection(id: string) {
         if (confirm("Are you sure you want to remove this connection?")) {
             try {
-                await invoke("remove_connection", { id });
+                await invoke("remove_connection", {id});
                 await loadConnections();
             } catch (e) {
                 console.error("Failed to remove connection", e);
@@ -80,7 +80,7 @@
         try {
             // Note: This command blocks on the Rust side until the connection is finished or errors out.
             // The frontend will update via the events we are listening to.
-            await invoke("connect_controller", { controllerKind: kind });
+            await invoke("connect_controller", {controllerKind: kind});
         } catch (e) {
             console.error("Connection failed", e);
             alert("Connection failed: " + e);
@@ -90,11 +90,18 @@
 
     function getIconForKind(kind: ControllerKind) {
         switch (kind) {
-            case ControllerKind.LeftJoyCon: return JoyConLeftIcon;
-            case ControllerKind.RightJoyCon: return JoyConRightIcon;
-            case ControllerKind.DualJoyCons: return DualJoyConsIcon;
-            case ControllerKind.ProNsoGcController: return ProControllerIcon;
-            default: return ProControllerIcon;
+            case ControllerKind.LeftJoyCon:
+                return JoyConLeftIcon;
+            case ControllerKind.RightJoyCon:
+                return JoyConRightIcon;
+            case ControllerKind.DualJoyCons:
+                return DualJoyConsIcon;
+            case ControllerKind.ProController:
+                return ProControllerIcon;
+            case ControllerKind.NsoGcController:
+                return ProControllerIcon;
+            default:
+                return ProControllerIcon;
         }
     }
 </script>
@@ -118,14 +125,15 @@
             {#each connections as connection (connection.id)}
                 <div class="connection-card">
                     <div class="icon-wrapper">
-                        <svelte:component this={getIconForKind(connection.controller_kind)} width="32" height="32" />
+                        <svelte:component this={getIconForKind(connection.controller_kind)} width="32" height="32"/>
                     </div>
                     <div class="connection-info">
                         <span class="controller-name">{CONTROLLER_KIND_LABELS[connection.controller_kind]}</span>
                         <span class="controller-id">ID: {connection.id.split('-')[0]}...</span>
                     </div>
                     <div class="connection-actions">
-                        <button class="action-btn delete-btn" title="Remove Connection" on:click={() => removeConnection(connection.id)}>
+                        <button class="action-btn delete-btn" title="Remove Connection"
+                                on:click={() => removeConnection(connection.id)}>
                             🗑
                         </button>
                     </div>
@@ -141,16 +149,16 @@
                 {#if selectedKind === null}
                     <h3>Select Controller to Connect</h3>
                     <p class="subtitle">Choose the type of device you want to pair.</p>
-                    
+
                     <div class="device-options">
                         {#each Object.values(ControllerKind) as kind}
                             <button class="device-btn" on:click={() => selectKindAndConnect(kind)}>
-                                <svelte:component this={getIconForKind(kind)} width="48" height="48" />
+                                <svelte:component this={getIconForKind(kind)} width="48" height="48"/>
                                 <span>{CONTROLLER_KIND_LABELS[kind]}</span>
                             </button>
                         {/each}
                     </div>
-                    
+
                     <div class="modal-actions">
                         <button on:click={resetConnectionState}>Cancel</button>
                     </div>
@@ -165,7 +173,8 @@
                                 Please press any button on the device to pair it.
                             </p>
                             <div class="waiting-icon">
-                                <svelte:component this={getIconForKind(waitingFor)} width="64" height="64" fill="var(--accent-color)" />
+                                <svelte:component this={getIconForKind(waitingFor)} width="64" height="64"
+                                                  fill="var(--accent-color)"/>
                             </div>
                         {:else}
                             <p class="waiting-prompt">Initializing connection...</p>
@@ -281,7 +290,10 @@
     /* Modal Styles */
     .modal-overlay {
         position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
         background: rgba(0, 0, 0, 0.7);
         display: flex;
         align-items: center;
@@ -387,12 +399,23 @@
     }
 
     @keyframes spin {
-        to { transform: rotate(360deg); }
+        to {
+            transform: rotate(360deg);
+        }
     }
 
     @keyframes pulse {
-        0% { transform: scale(0.95); opacity: 0.5; }
-        50% { transform: scale(1.05); opacity: 1; }
-        100% { transform: scale(0.95); opacity: 0.5; }
+        0% {
+            transform: scale(0.95);
+            opacity: 0.5;
+        }
+        50% {
+            transform: scale(1.05);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(0.95);
+            opacity: 0.5;
+        }
     }
 </style>
