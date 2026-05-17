@@ -1,10 +1,11 @@
+use crate::connection::motion_source::MotionSource;
 use crate::data::input_data::InputData;
 use crate::data::ns_input::NsInput;
 use crate::data::ns_input::NsInput::{
     AccelBackward, AccelDown, AccelForward, AccelLeft, AccelRight, AccelUp, Capture, Down, Gl, Gr,
     GyroPitchDown, GyroPitchUp, GyroRollLeft, GyroRollRight, GyroYawLeft, GyroYawRight, Home, Left,
-    LeftXMinus, LeftXPlus, LeftYMinus, LeftYPlus, Minus, Plus, Right, RightXMinus, RightXPlus,
-    RightYMinus, RightYPlus, Sl, Sr, Tl, Tr, Up, Zl, Zr, A, B, L, R, X, Y,
+    LeftXMinus, LeftXPlus, LeftYMinus, LeftYPlus, Minus, Plus, Right, RightXMinus, RightXPlus, RightYMinus, RightYPlus,
+    Sl, Sr, Tl, Tr, Up, Zl, Zr, A, B, L, R, X, Y,
 };
 use bitflags::bitflags;
 use maplit::hashmap;
@@ -17,16 +18,17 @@ const RIGHT_STICK_RANGE: RangeInclusive<usize> = 13..=16;
 bitflags! {
     #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
     struct RightJoyConButtonMasks: u32 {
-        const Plus = 0x0002;
-        const Tr = 0x0004;
-        const Y = 0x0100;
-        const B = 0x0200;
-        const X = 0x0400;
-        const A = 0x0800;
-        const Sr = 0x1000;
-        const Sl = 0x2000;
-        const R = 0x4000;
-        const Zr = 0x8000;
+        const Y = 0x1_0000;
+        const X = 0x2_0000;
+        const B = 0x4_0000;
+        const A = 0x8_0000;
+        const Sr = 0x10_0000;
+        const Sl = 0x20_0000;
+        const R = 0x40_0000;
+        const Zr = 0x80_0000;
+        const Plus = 0x200_0000;
+        const Tr = 0x400_0000;
+        const Home = 0x1000_0000;
     }
 
     #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -104,6 +106,10 @@ impl Decoder {
     }
 
     fn decode_left_joystick(&self, buffer: &[u8]) -> HashMap<NsInput, f32> {
+        if buffer.is_empty() {
+            return hashmap!();
+        }
+
         let stick = self.decode_joystick(&buffer[LEFT_STICK_RANGE]);
 
         hashmap! {
@@ -115,6 +121,10 @@ impl Decoder {
     }
 
     fn decode_right_joystick(&self, buffer: &[u8]) -> HashMap<NsInput, f32> {
+        if buffer.is_empty() {
+            return hashmap!();
+        }
+
         let stick = self.decode_joystick(&buffer[RIGHT_STICK_RANGE]);
 
         hashmap! {
@@ -134,6 +144,10 @@ impl Decoder {
     // ------------ buttons decoding ------------
 
     fn decode_left_buttons(&self, buffer: &[u8]) -> HashMap<NsInput, f32> {
+        if buffer.is_empty() {
+            return hashmap!();
+        }
+
         let button_offset = 4;
         let b0 = buffer[button_offset];
         let b1 = buffer[button_offset + 1];
@@ -169,6 +183,10 @@ impl Decoder {
     }
 
     fn decode_right_buttons(&self, buffer: &[u8]) -> HashMap<NsInput, f32> {
+        if buffer.is_empty() {
+            return hashmap!();
+        }
+
         let button_offset = 3;
         let b0 = buffer[button_offset];
         let b1 = buffer[button_offset + 1];
@@ -190,7 +208,7 @@ impl Decoder {
             Y => from_flag(RightJoyConButtonMasks::Y),
             X => from_flag(RightJoyConButtonMasks::X),
 
-            Home => 0_f32,
+            Home => from_flag(RightJoyConButtonMasks::Home),
 
             R => from_flag(RightJoyConButtonMasks::R),
             Tr => from_flag(RightJoyConButtonMasks::Tr),
@@ -307,6 +325,10 @@ impl Decoder {
     // }
 
     fn decode_motion(&self, buffer: &[u8]) -> HashMap<NsInput, f32> {
+        if buffer.is_empty() {
+            return hashmap!();
+        }
+
         let accel_x = i16::from_le_bytes([buffer[0x30], buffer[0x31]]);
         let accel_y = i16::from_le_bytes([buffer[0x32], buffer[0x33]]);
         let accel_z = i16::from_le_bytes([buffer[0x34], buffer[0x35]]);
@@ -355,6 +377,24 @@ impl Decoder {
         inputs.extend(self.decode_right_buttons(buffer));
         // inputs.extend(self.decode_mouse_coords(buffer));
         inputs.extend(self.decode_motion(buffer));
+
+        InputData::new(inputs)
+    }
+
+    pub fn decode_dual_joycons(
+        &self,
+        left_buffer: &[u8],
+        right_buffer: &[u8],
+        gyro_source: MotionSource,
+    ) -> InputData {
+        let mut inputs = self.decode_left_joystick(left_buffer);
+        inputs.extend(self.decode_left_buttons(left_buffer));
+        inputs.extend(self.decode_right_joystick(right_buffer));
+        inputs.extend(self.decode_right_buttons(right_buffer));
+        inputs.extend(match gyro_source {
+            MotionSource::Left => self.decode_motion(left_buffer),
+            MotionSource::Right => self.decode_motion(right_buffer),
+        });
 
         InputData::new(inputs)
     }
