@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() -> tauri::Result<()> {
-    s2windows_lib::run()
+    ns2windows_lib::run()
 }
