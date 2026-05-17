@@ -5,5 +5,6 @@ pub enum ControllerKind {
     LeftJoyCon,
     RightJoyCon,
     DualJoyCons,
-    ProNsoGcController,
+    ProController,
+    NsoGcController,
 }
