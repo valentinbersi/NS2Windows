@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "s2windows",
+  "productName": "NS2windows",
   "version": "0.1.0",
-  "identifier": "dev.vbersi.s2windows",
+  "identifier": "dev.vbersi.ns2windows",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "s2windows",
+        "title": "NS2windows",
         "width": 800,
         "height": 600
       }
