@@ -6,11 +6,12 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
+use vigem_rust::Client;
 
-#[derive(Debug)]
 pub struct AppState {
     pub profile_repository: ProfileRepository,
     pub connector: BluetoothConnector,
     pub communicator: BluetoothCommunicator,
     pub connected_controllers: RwLock<HashMap<Uuid, Arc<ConnectedController>>>,
+    pub vigem_client: Client,
 }
