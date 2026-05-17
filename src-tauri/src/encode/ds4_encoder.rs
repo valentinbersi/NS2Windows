@@ -1,125 +1,196 @@
-use crate::data::ps4_controller_data::{Ps4Button, Ps4ControllerData};
-use bitflags::bitflags_match;
+use crate::data::motion_data::MotionData;
+use crate::data::output::Output;
+use crate::data::output::Output::{L2Lt, R2Rt};
+use crate::data::output_data::OutputData;
+use crate::data::trigger_data::TriggerData;
 use vigem_rust::controller::ds4::{Ds4ReportEx, Ds4ReportExData, Ds4SpecialButton};
 use vigem_rust::{Ds4Button, Ds4Dpad};
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Ds4Encoder;
 
+struct StickData {
+    lx: u8,
+    ly: u8,
+    rx: u8,
+    ry: u8,
+}
+
 impl Ds4Encoder {
-    fn encode_sticks(&self, ps4: &Ps4ControllerData, report: &mut Ds4ReportExData) {
-        report.thumb_lx = (ps4.left_stick.x * 127_f32 + 128_f32) as u8;
-        report.thumb_ly = (ps4.left_stick.y * 127_f32 + 128_f32) as u8;
-        report.thumb_rx = (ps4.right_stick.x * 127_f32 + 128_f32) as u8;
-        report.thumb_ry = (ps4.right_stick.y * 127_f32 + 128_f32) as u8;
+    const STICK_CENTER: f32 = 128_f32;
+
+    fn axis(&self, data: &OutputData, minus: Output, plus: Output) -> f32 {
+        let minus = data.get(minus).unwrap_or(0_f32);
+        let plus = data.get(plus).unwrap_or(0_f32);
+
+        minus + plus
     }
 
-    fn encode_buttons(&self, ps4: &Ps4ControllerData, report: &mut Ds4ReportExData) {
-        if ps4.buttons.contains(Ps4Button::R1) {
-            report.buttons |= Ds4Button::SHOULDER_RIGHT.bits();
+    fn stick(&self, data: &OutputData, minus: Output, plus: Output) -> u8 {
+        let axis = self.axis(data, minus, plus);
+
+        (axis * i8::MAX as f32 + Self::STICK_CENTER) as u8
+    }
+
+    fn encode_sticks(&self, data: &OutputData) -> StickData {
+        let lx = self.stick(data, Output::LeftXMinus, Output::LeftXPlus);
+        let ly = 255 - self.stick(data, Output::LeftYMinus, Output::LeftYPlus);
+        let rx = self.stick(data, Output::RightXMinus, Output::RightXPlus);
+        let ry = 255 - self.stick(data, Output::RightYMinus, Output::RightYPlus);
+
+        StickData { lx, ly, rx, ry }
+    }
+
+    const THRESHOLD: f32 = 0.5;
+
+    fn is_button_pressed(&self, data: &OutputData, output: Output) -> bool {
+        data.get(output)
+            .is_some_and(|value| value >= Self::THRESHOLD)
+    }
+
+    fn encode_buttons(&self, data: &OutputData) -> (Ds4Button, Ds4SpecialButton) {
+        let mut buttons = Ds4Button::empty();
+        let mut special = Ds4SpecialButton::empty();
+
+        if self.is_button_pressed(data, Output::R1Rb) {
+            buttons |= Ds4Button::SHOULDER_RIGHT;
         }
 
-        if ps4.buttons.contains(Ps4Button::L1) {
-            report.buttons |= Ds4Button::SHOULDER_LEFT.bits();
+        if self.is_button_pressed(data, Output::L1Lb) {
+            buttons |= Ds4Button::SHOULDER_LEFT;
         }
 
-        if ps4.buttons.contains(Ps4Button::SHARE) {
-            report.buttons |= Ds4Button::SHARE.bits();
+        if self.is_button_pressed(data, Output::Share) {
+            buttons |= Ds4Button::SHARE;
         }
 
-        if ps4.buttons.contains(Ps4Button::OPTIONS) {
-            report.buttons |= Ds4Button::OPTIONS.bits();
+        if self.is_button_pressed(data, Output::OptionsStart) {
+            buttons |= Ds4Button::OPTIONS;
         }
 
-        if ps4.buttons.contains(Ps4Button::TRIANGLE) {
-            report.buttons |= Ds4Button::TRIANGLE.bits();
+        if self.is_button_pressed(data, Output::TriangleY) {
+            buttons |= Ds4Button::TRIANGLE;
         }
 
-        if ps4.buttons.contains(Ps4Button::SQUARE) {
-            report.buttons |= Ds4Button::SQUARE.bits();
+        if self.is_button_pressed(data, Output::SquareX) {
+            buttons |= Ds4Button::SQUARE;
         }
 
-        if ps4.buttons.contains(Ps4Button::CIRCLE) {
-            report.buttons |= Ds4Button::CIRCLE.bits();
+        if self.is_button_pressed(data, Output::CircleB) {
+            buttons |= Ds4Button::CIRCLE;
         }
 
-        if ps4.buttons.contains(Ps4Button::CROSS) {
-            report.buttons |= Ds4Button::CROSS.bits();
+        if self.is_button_pressed(data, Output::CrossA) {
+            buttons |= Ds4Button::CROSS;
         }
 
-        if ps4.buttons.contains(Ps4Button::L3) {
-            report.buttons |= Ds4Button::THUMB_LEFT.bits();
+        if self.is_button_pressed(data, Output::L3Ls) {
+            buttons |= Ds4Button::THUMB_LEFT;
         }
 
-        if ps4.buttons.contains(Ps4Button::R3) {
-            report.buttons |= Ds4Button::THUMB_RIGHT.bits();
+        if self.is_button_pressed(data, Output::R3Rs) {
+            buttons |= Ds4Button::THUMB_RIGHT;
         }
 
-        if ps4.buttons.contains(Ps4Button::PS) {
-            report.special |= Ds4SpecialButton::PS.bits();
+        if self.is_button_pressed(data, Output::PsGuide) {
+            special |= Ds4SpecialButton::PS;
         }
 
-        if ps4.buttons.contains(Ps4Button::TOUCHPAD) {
-            report.special |= Ds4SpecialButton::TOUCHPAD.bits();
+        if self.is_button_pressed(data, Output::TouchpadBack) {
+            special |= Ds4SpecialButton::TOUCHPAD;
+        }
+
+        (buttons, special)
+    }
+
+    fn encode_d_pad(&self, data: &OutputData) -> Ds4Dpad {
+        let up = self.is_button_pressed(data, Output::Up);
+        let down = self.is_button_pressed(data, Output::Down);
+        let left = self.is_button_pressed(data, Output::Left);
+        let right = self.is_button_pressed(data, Output::Right);
+
+        match (up, down, left, right) {
+            (true, true, true, true) => Ds4Dpad::Neutral,
+
+            (true, _, true, true) => Ds4Dpad::North,
+            (_, true, true, true) => Ds4Dpad::South,
+            (true, true, true, _) => Ds4Dpad::West,
+            (true, true, _, true) => Ds4Dpad::East,
+
+            (true, true, _, _) => Ds4Dpad::Neutral,
+            (_, _, true, true) => Ds4Dpad::Neutral,
+
+            (true, _, true, _) => Ds4Dpad::NorthWest,
+            (true, _, _, true) => Ds4Dpad::NorthEast,
+            (_, true, true, _) => Ds4Dpad::SouthWest,
+            (_, true, _, true) => Ds4Dpad::SouthEast,
+
+            (true, _, _, _) => Ds4Dpad::North,
+            (_, true, _, _) => Ds4Dpad::South,
+            (_, _, true, _) => Ds4Dpad::West,
+            (_, _, _, true) => Ds4Dpad::East,
+
+            _ => Ds4Dpad::Neutral,
         }
     }
 
-    fn encode_d_pad(&self, ps4: &Ps4ControllerData, report: &mut Ds4ReportExData) {
-        let d_pad = bitflags_match!(ps4.buttons, {
-            // Pressing all buttons results in neutral
-            Ps4Button::UP | Ps4Button::DOWN | Ps4Button::LEFT | Ps4Button::RIGHT => Ds4Dpad::Neutral,
+    fn encode_trigger(&self, data: &OutputData, output: Output) -> u8 {
+        data.get(output)
+            .map(|value| value * u8::MAX as f32)
+            .map(|value| value as u8)
+            .unwrap_or(0)
+    }
 
-            // Pressing 3 buttons cancels the two ones pointing in opposite directions
-            Ps4Button::UP | Ps4Button::LEFT | Ps4Button::RIGHT => Ds4Dpad::North,
-            Ps4Button::DOWN | Ps4Button::LEFT | Ps4Button::RIGHT => Ds4Dpad::South,
-            Ps4Button::UP | Ps4Button::DOWN | Ps4Button::LEFT => Ds4Dpad::West,
-            Ps4Button::UP | Ps4Button::DOWN | Ps4Button::RIGHT => Ds4Dpad::East,
+    fn encode_triggers(&self, data: &OutputData) -> TriggerData {
+        TriggerData {
+            l: self.encode_trigger(data, L2Lt),
+            r: self.encode_trigger(data, R2Rt),
+        }
+    }
 
-            // Pressing 2 buttons in opposite directions results in neutral
-            Ps4Button::UP | Ps4Button::DOWN => Ds4Dpad::Neutral,
-            Ps4Button::LEFT | Ps4Button::RIGHT => Ds4Dpad::Neutral,
+    fn motion(&self, data: &OutputData, minus: Output, plus: Output) -> i16 {
+        let axis = self.axis(data, minus, plus);
 
-            // Pressing 2 buttons "adds" the output
-            Ps4Button::UP | Ps4Button::LEFT => Ds4Dpad::NorthWest,
-            Ps4Button::UP | Ps4Button::RIGHT => Ds4Dpad::NorthEast,
-            Ps4Button::DOWN | Ps4Button::LEFT => Ds4Dpad::SouthWest,
-            Ps4Button::DOWN | Ps4Button::RIGHT => Ds4Dpad::SouthEast,
+        (axis * 16.384) as i16
+    }
 
-            // Pressing 1 button maps directly to the corresponding direction
-            Ps4Button::UP => Ds4Dpad::North,
-            Ps4Button::DOWN => Ds4Dpad::South,
-            Ps4Button::LEFT => Ds4Dpad::West,
-            Ps4Button::RIGHT => Ds4Dpad::East,
+    fn encode_motion(&self, data: &OutputData) -> MotionData {
+        MotionData {
+            gyro_x: self.motion(data, Output::GyroPitchDown, Output::GyroPitchUp),
+            gyro_y: self.motion(data, Output::GyroYawLeft, Output::GyroYawRight),
+            gyro_z: self.motion(data, Output::GyroRollLeft, Output::GyroRollRight),
+            accel_x: self.motion(data, Output::AccelLeft, Output::AccelRight),
+            accel_y: self.motion(data, Output::AccelDown, Output::AccelUp),
+            accel_z: self.motion(data, Output::AccelBackward, Output::AccelForward),
+        }
+    }
 
-            // Pressing 0 buttons results in neutral
-           _ => Ds4Dpad::Neutral
-        });
+    pub fn encode(&self, data: &OutputData) -> Ds4ReportEx {
+        let sticks = self.encode_sticks(data);
+        let (buttons, special) = self.encode_buttons(data);
+        let d_pad = self.encode_d_pad(data);
+        let trigger = self.encode_triggers(data);
+        let motion = self.encode_motion(data);
+
+        let mut report = Ds4ReportExData {
+            thumb_lx: sticks.lx,
+            thumb_ly: sticks.ly,
+            thumb_rx: sticks.rx,
+            thumb_ry: sticks.ry,
+            buttons: buttons.bits(),
+            special: special.bits(),
+            trigger_l: trigger.l,
+            trigger_r: trigger.r,
+            gyro_x: motion.gyro_x,
+            gyro_y: motion.gyro_y,
+            gyro_z: motion.gyro_z,
+            accel_x: motion.accel_x,
+            accel_y: motion.accel_y,
+            accel_z: motion.accel_z,
+            ..Default::default()
+        };
 
         report.set_dpad(d_pad);
-    }
-
-    fn encode_triggers(&self, ps4: &Ps4ControllerData, report: &mut Ds4ReportExData) {
-        report.trigger_l = ps4.trigger_data.trigger_l;
-        report.trigger_r = ps4.trigger_data.trigger_r;
-    }
-
-    fn encode_motion(&self, ps4: &Ps4ControllerData, report: &mut Ds4ReportExData) {
-        report.gyro_x = ps4.motion.gyro_x;
-        report.gyro_y = ps4.motion.gyro_y;
-        report.gyro_z = ps4.motion.gyro_z;
-        report.accel_x = ps4.motion.accel_x;
-        report.accel_y = ps4.motion.accel_y;
-        report.accel_z = ps4.motion.accel_z;
-    }
-
-    pub fn encode(&self, ps4: Ps4ControllerData) -> Ds4ReportEx {
-        let mut report = Ds4ReportExData::default();
-
-        self.encode_sticks(&ps4, &mut report);
-        self.encode_buttons(&ps4, &mut report);
-        self.encode_d_pad(&ps4, &mut report);
-        self.encode_triggers(&ps4, &mut report);
-        self.encode_motion(&ps4, &mut report);
 
         Ds4ReportEx { report }
     }
