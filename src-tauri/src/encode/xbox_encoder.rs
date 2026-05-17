@@ -121,8 +121,8 @@ impl XboxEncoder {
 
     fn encode_triggers(&self, data: &OutputData) -> TriggerData {
         TriggerData {
-            l: self.encode_trigger(data, R2Rt),
-            r: self.encode_trigger(data, L2Lt),
+            l: self.encode_trigger(data, L2Lt),
+            r: self.encode_trigger(data, R2Rt),
         }
     }
 
