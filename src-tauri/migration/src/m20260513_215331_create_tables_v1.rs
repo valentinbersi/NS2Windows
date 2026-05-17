@@ -56,16 +56,16 @@ impl MigrationTrait for Migration {
                     .table(ValueConditions::Table)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new(ValueConditions::ConditionsId)
+                        ColumnDef::new(ValueConditions::ConditionId)
                             .uuid()
                             .not_null()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(ValueConditions::Value).string().not_null())
+                    .col(ColumnDef::new(ValueConditions::Input).string().not_null())
                     .foreign_key(
                         ForeignKeyCreateStatement::new()
                             .name("foreign_valueConditions_conditionsId")
-                            .from(ValueConditions::Table, ValueConditions::ConditionsId)
+                            .from(ValueConditions::Table, ValueConditions::ConditionId)
                             .to(Conditions::Table, Conditions::Id)
                             .on_update(ForeignKeyAction::Cascade)
                             .on_delete(ForeignKeyAction::Cascade),
@@ -109,6 +109,6 @@ enum Conditions {
 #[derive(DeriveIden)]
 enum ValueConditions {
     Table,
-    ConditionsId,
-    Value,
+    ConditionId,
+    Input,
 }
