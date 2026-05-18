@@ -89,15 +89,11 @@ impl Decoder {
             return StickData { x: 0_f32, y: 0_f32 };
         }
 
-        let b0 = buffer[0] as i32;
-        let b1 = buffer[1] as i32;
-        let b2 = buffer[2] as i32;
+        let x = (u16::from_le_bytes([buffer[0], buffer[1]]) & 0x0FFF) as i32;
+        let y = (u16::from_le_bytes([buffer[1], buffer[2]]) >> 4) as i32;
 
-        let x_raw = ((b1 & 0x0F) << 8) | b0;
-        let y_raw = (b2 << 4) | ((b1 & 0xF0) >> 4);
-
-        let mut x = (x_raw - 2048) as f32 / 2048_f32;
-        let mut y = (y_raw - 2048) as f32 / 2048_f32;
+        let mut x = (x - 2048) as f32 / 2048_f32;
+        let mut y = (y - 2048) as f32 / 2048_f32;
 
         let dead_zone = 0.08;
         if x.abs() < dead_zone && y.abs() < dead_zone {
