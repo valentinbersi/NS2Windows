@@ -12,37 +12,42 @@ use maplit::hashmap;
 use std::collections::HashMap;
 use std::ops::RangeInclusive;
 
+const LEFT_BUTTONS_RANGE: RangeInclusive<usize> = 0x05..=0x06;
+const RIGHT_BUTTONS_RANGE: RangeInclusive<usize> = 0x04..=0x05;
+
 const LEFT_STICK_RANGE: RangeInclusive<usize> = 10..=12;
 const RIGHT_STICK_RANGE: RangeInclusive<usize> = 13..=16;
 
 bitflags! {
     #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-    struct RightJoyConButtonMasks: u32 {
-        const Y = 0x1_0000;
-        const X = 0x2_0000;
-        const B = 0x4_0000;
-        const A = 0x8_0000;
-        const Sr = 0x10_0000;
-        const Sl = 0x20_0000;
-        const R = 0x40_0000;
-        const Zr = 0x80_0000;
-        const Plus = 0x200_0000;
-        const Tr = 0x400_0000;
-        const Home = 0x1000_0000;
+    struct RightJoyConButtonMasks: u16 {
+        const Plus = 0x00_02;
+        const Tr = 0x00_04;
+        const Home = 0x00_10;
+        const Chat = 0x00_40;
+        const Y = 0x01_00;
+        const X = 0x02_00;
+        const B = 0x04_00;
+        const A = 0x08_00;
+        const Sr = 0x10_00;
+        const Sl = 0x20_00;
+        const R = 0x40_00;
+        const Zr = 0x80_00;
     }
 
     #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-    struct LeftJoyConButtonMasks: u32 {
-        const Down = 0x0001;
-        const Up = 0x0002;
-        const Right = 0x0004;
-        const Left = 0x0008;
-        const Sr = 0x0010;
-        const Sl = 0x0020;
-        const L = 0x0040;
-        const Zl = 0x0080;
-        const Minus = 0x0100;
-        const Tl = 0x0800;
+    struct LeftJoyConButtonMasks: u16 {
+        const Down = 0x00_01;
+        const Up = 0x00_02;
+        const Right = 0x00_04;
+        const Left = 0x00_08;
+        const Sr = 0x00_10;
+        const Sl = 0x00_20;
+        const L = 0x00_40;
+        const Zl = 0x00_80;
+        const Minus = 0x01_00;
+        const Tl = 0x08_00;
+        const Capture = 0x20_00;
     }
 
     #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -144,16 +149,7 @@ impl Decoder {
     // ------------ buttons decoding ------------
 
     fn decode_left_buttons(&self, buffer: &[u8]) -> HashMap<NsInput, f32> {
-        if buffer.is_empty() {
-            return hashmap!();
-        }
-
-        let button_offset = 4;
-        let b0 = buffer[button_offset];
-        let b1 = buffer[button_offset + 1];
-        let b2 = buffer[button_offset + 2];
-
-        let state = u32::from_be_bytes([0, b0, b1, b2]);
+        let state = u16::from_be_bytes(buffer[LEFT_BUTTONS_RANGE].try_into().unwrap());
 
         let from_flag = |flag: LeftJoyConButtonMasks| {
             if state & flag.bits() != 0 {
@@ -183,16 +179,7 @@ impl Decoder {
     }
 
     fn decode_right_buttons(&self, buffer: &[u8]) -> HashMap<NsInput, f32> {
-        if buffer.is_empty() {
-            return hashmap!();
-        }
-
-        let button_offset = 3;
-        let b0 = buffer[button_offset];
-        let b1 = buffer[button_offset + 1];
-        let b2 = buffer[button_offset + 2];
-
-        let state = u32::from_le_bytes([0, b0, b1, b2]);
+        let state = u16::from_be_bytes(buffer[RIGHT_BUTTONS_RANGE].try_into().unwrap());
 
         let from_flag = |flag: RightJoyConButtonMasks| {
             if state & flag.bits() != 0 {
