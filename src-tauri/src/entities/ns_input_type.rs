@@ -19,6 +19,8 @@ pub enum NsInputType {
     Home,
     #[sea_orm(string_value = "Capture")]
     Capture,
+    #[sea_orm(string_value = "Chat")]
+    Chat,
 
     // ----------- Right buttons -----------
     #[sea_orm(string_value = "R")]
@@ -115,6 +117,7 @@ impl From<NsInput> for NsInputType {
 
             NsInput::Home => NsInputType::Home,
             NsInput::Capture => NsInputType::Capture,
+            NsInput::Chat => NsInputType::Chat,
 
             NsInput::R => NsInputType::R,
             NsInput::Zr => NsInputType::Zr,
@@ -172,6 +175,7 @@ impl From<NsInputType> for NsInput {
             NsInputType::X => NsInput::X,
             NsInputType::Home => NsInput::Home,
             NsInputType::Capture => NsInput::Capture,
+            NsInputType::Chat => NsInput::Chat,
             NsInputType::R => NsInput::R,
             NsInputType::Zr => NsInput::Zr,
             NsInputType::Tr => NsInput::Tr,

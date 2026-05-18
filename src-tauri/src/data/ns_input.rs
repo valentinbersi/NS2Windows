@@ -12,6 +12,7 @@ pub enum NsInput {
     // ----------- Special buttons -----------
     Home,
     Capture,
+    Chat,
 
     // ----------- Right buttons -----------
     R,

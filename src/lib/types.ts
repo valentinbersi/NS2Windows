@@ -17,7 +17,7 @@ export interface Connection {
 }
 
 export type NsInput =
-    | "B" | "A" | "Y" | "X" | "Home" | "Capture"
+    | "B" | "A" | "Y" | "X" | "Home" | "Capture" | "Chat"
     | "R" | "Zr" | "Tr" | "Sr" | "Gr"
     | "L" | "Zl" | "Tl" | "Sl" | "Gl"
     | "Plus" | "Minus"
@@ -59,7 +59,7 @@ export const CONTROLLER_KIND_LABELS: Record<ControllerKind, string> = {
 
 export const NS_INPUT_LABELS: Record<NsInput, string> = {
     B: "B", A: "A", Y: "Y", X: "X",
-    Home: "Home", Capture: "Capture",
+    Home: "Home", Capture: "Capture", Chat: "Chat",
     R: "R", Zr: "ZR", Tr: "TR", Sr: "SR", Gr: "GR",
     L: "L", Zl: "ZL", Tl: "TL", Sl: "SL", Gl: "GL",
     Plus: "Plus", Minus: "Minus",

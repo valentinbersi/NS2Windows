@@ -2,10 +2,10 @@ use crate::connection::motion_source::MotionSource;
 use crate::data::input_data::InputData;
 use crate::data::ns_input::NsInput;
 use crate::data::ns_input::NsInput::{
-    AccelBackward, AccelDown, AccelForward, AccelLeft, AccelRight, AccelUp, Capture, Down, Gl, Gr,
-    GyroPitchDown, GyroPitchUp, GyroRollLeft, GyroRollRight, GyroYawLeft, GyroYawRight, Home, Left,
-    LeftXMinus, LeftXPlus, LeftYMinus, LeftYPlus, Minus, Plus, Right, RightXMinus, RightXPlus, RightYMinus, RightYPlus,
-    Sl, Sr, Tl, Tr, Up, Zl, Zr, A, B, L, R, X, Y,
+    AccelBackward, AccelDown, AccelForward, AccelLeft, AccelRight, AccelUp, Capture, Chat, Down, Gl,
+    Gr, GyroPitchDown, GyroPitchUp, GyroRollLeft, GyroRollRight, GyroYawLeft, GyroYawRight, Home,
+    Left, LeftXMinus, LeftXPlus, LeftYMinus, LeftYPlus, Minus, Plus, Right, RightXMinus, RightXPlus, RightYMinus,
+    RightYPlus, Sl, Sr, Tl, Tr, Up, Zl, Zr, A, B, L, R, X, Y,
 };
 use bitflags::bitflags;
 use maplit::hashmap;
@@ -196,6 +196,7 @@ impl Decoder {
             X => from_flag(RightJoyConButtonMasks::X),
 
             Home => from_flag(RightJoyConButtonMasks::Home),
+            Chat => from_flag(RightJoyConButtonMasks::Chat),
 
             R => from_flag(RightJoyConButtonMasks::R),
             Tr => from_flag(RightJoyConButtonMasks::Tr),
