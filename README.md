@@ -1,6 +1,6 @@
-# S2Windows
+# NS2Windows
 
-S2Windows is a desktop application built with Tauri, SvelteKit, and Rust that allows you to easily connect and use
+NS2Windows is a desktop application built with Tauri, SvelteKit, and Rust that allows you to easily connect and use
 Nintendo Switch 2 controllers on your Windows PC. The app emulates your connected devices as standard XInput (Xbox 360)
 or DualShock 4 (PS4) controllers, ensuring maximum compatibility with PC games.
 
