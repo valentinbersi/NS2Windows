@@ -8,13 +8,14 @@ use crate::connection::connector::BluetoothConnector;
 use crate::repositories::profile_repository::ProfileRepository;
 use crate::state::AppState;
 use btleplug::api::Manager as BManager;
+use futures::executor::block_on;
 use maplit::hashmap;
 use migration::{Migrator, MigratorTrait};
 use sea_orm::Database;
 use std::error::Error;
 use std::fs;
 use std::fs::File;
-use tauri::Manager as TManager;
+use tauri::{App, AppHandle, Manager as TManager, RunEvent};
 use tokio::sync::RwLock;
 use vigem_rust::Client;
 
@@ -31,6 +32,61 @@ pub mod profiles;
 pub mod repositories;
 pub mod state;
 
+fn setup(app: &mut App) -> Result<(), Box<dyn Error>> {
+    let app_data_dir = app.path().app_data_dir()?;
+
+    if !app_data_dir.exists() {
+        fs::create_dir_all(&app_data_dir)?;
+    }
+
+    let db_path = app_data_dir.join("profiles.db");
+
+    if !db_path.exists() {
+        File::create(&db_path)?;
+    }
+
+    let db = tauri::async_runtime::block_on(async {
+        let db = Database::connect(format!("sqlite://{}", db_path.to_string_lossy())).await?;
+        Migrator::up(&db, None).await?;
+        Ok::<sea_orm::DatabaseConnection, Box<dyn Error>>(db)
+    })?;
+
+    let adapter = tauri::async_runtime::block_on(async {
+        let manager = btleplug::platform::Manager::new().await?;
+        let adapters = manager.adapters().await?;
+        Ok::<Option<btleplug::platform::Adapter>, btleplug::Error>(adapters.first().cloned())
+    })?
+    .ok_or("No Bluetooth adapters found")?;
+
+    let vigem_client = Client::connect()?;
+
+    app.manage(AppState {
+        profile_repository: ProfileRepository::new(db),
+        connector: BluetoothConnector::new(adapter),
+        communicator: BluetoothCommunicator,
+        connected_controllers: RwLock::new(hashmap!()),
+        vigem_client,
+    });
+
+    Ok(())
+}
+
+fn event_loop(app_handle: &AppHandle, event: RunEvent) {
+    if let RunEvent::ExitRequested { .. } = event {
+        block_on(async move {
+            for controller in app_handle
+                .state::<AppState>()
+                .connected_controllers
+                .read()
+                .await
+                .values()
+            {
+                _ = controller.disconnect().await;
+            }
+        });
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() -> tauri::Result<()> {
     tauri::Builder::default()
@@ -45,46 +101,9 @@ pub fn run() -> tauri::Result<()> {
             remove_connection,
             start_controllers,
         ])
-        .setup(|app| {
-            let app_data_dir = app.path().app_data_dir()?;
+        .setup(setup)
+        .build(tauri::generate_context!())?
+        .run(event_loop);
 
-            if !app_data_dir.exists() {
-                fs::create_dir_all(&app_data_dir)?;
-            }
-
-            let db_path = app_data_dir.join("profiles.db");
-
-            if !db_path.exists() {
-                File::create(&db_path)?;
-            }
-
-            let db = tauri::async_runtime::block_on(async {
-                let db =
-                    Database::connect(format!("sqlite://{}", db_path.to_string_lossy())).await?;
-                Migrator::up(&db, None).await?;
-                Ok::<sea_orm::DatabaseConnection, Box<dyn Error>>(db)
-            })?;
-
-            let adapter = tauri::async_runtime::block_on(async {
-                let manager = btleplug::platform::Manager::new().await?;
-                let adapters = manager.adapters().await?;
-                Ok::<Option<btleplug::platform::Adapter>, btleplug::Error>(
-                    adapters.first().cloned(),
-                )
-            })?
-            .ok_or("No Bluetooth adapters found")?;
-
-            let vigem_client = Client::connect()?;
-
-            app.manage(AppState {
-                profile_repository: ProfileRepository::new(db),
-                connector: BluetoothConnector::new(adapter),
-                communicator: BluetoothCommunicator,
-                connected_controllers: RwLock::new(hashmap!()),
-                vigem_client,
-            });
-
-            Ok(())
-        })
-        .run(tauri::generate_context!())
+    Ok(())
 }
