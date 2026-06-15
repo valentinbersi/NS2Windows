@@ -1,10 +1,10 @@
-use crate::connection::connected_controller::NsController;
 use crate::connection::joy_con_side::JoyConSide;
 use crate::connection::motion_source::MotionSource;
 use crate::data::profile_kind::ProfileKind;
 use crate::decode::decoder::Decoder;
 use crate::encode::encoder::Encoder;
 use crate::evaluation::evaluator::Evaluator;
+use crate::ns_controller::NsController;
 use crate::state::AppState;
 use btleplug::api::Peripheral;
 use futures::StreamExt;

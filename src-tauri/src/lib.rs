@@ -28,6 +28,7 @@ pub mod dtos;
 pub mod encode;
 pub mod entities;
 pub mod evaluation;
+pub mod ns_controller;
 pub mod profiles;
 pub mod repositories;
 pub mod state;

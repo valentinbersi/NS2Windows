@@ -1,4 +1,4 @@
-use crate::connection::connected_controller::ConnectedDevice;
+use crate::connection::connected_device::ConnectedDevice;
 use bitflags::bitflags;
 use btleplug::api::{Peripheral as PeripheralTrait, WriteType};
 use std::time::Duration;
