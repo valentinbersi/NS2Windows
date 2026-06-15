@@ -14,8 +14,8 @@ use tauri::State;
 use tokio::sync::Mutex;
 use tokio::time::sleep;
 use uuid::Uuid;
-use vigem_rust::target::{DualShock4, Xbox360};
 use vigem_rust::TargetHandle;
+use vigem_rust::target::{DualShock4, Xbox360};
 
 #[derive(Clone)]
 enum VirtualController {
@@ -62,7 +62,7 @@ pub async fn start_controllers(
         if let Some(profile) = profile
             && let Some(connection) = connection
         {
-            let virtual_controller = match profile.profile_kind {
+            let virtual_controller = match profile.kind {
                 ProfileKind::Ps4 => VirtualController::DualShock4(
                     state
                         .vigem_client
@@ -111,7 +111,7 @@ pub async fn start_controllers(
 
                             let output = evaluator.evaluate_profile(&profile, &input);
 
-                            match profile.profile_kind {
+                            match profile.kind {
                                 ProfileKind::Ps4 => {
                                     let report = encoder.encode_ps4(&output);
                                     let _ = virtual_controller.get_ps4().update_ex(&report);
@@ -186,7 +186,7 @@ pub async fn start_controllers(
 
                             let output = evaluator.evaluate_profile(&profile, &input);
 
-                            match profile.profile_kind {
+                            match profile.kind {
                                 ProfileKind::Ps4 => {
                                     let report = encoder.encode_ps4(&output);
                                     let _ = virtual_controller.get_ps4().update_ex(&report);
@@ -220,7 +220,7 @@ pub async fn start_controllers(
 
                             let output = evaluator.evaluate_profile(&profile, &input);
 
-                            match profile.profile_kind {
+                            match profile.kind {
                                 ProfileKind::Ps4 => {
                                     let report = encoder.encode_ps4(&output);
                                     let _ = virtual_controller.get_ps4().update_ex(&report);
@@ -254,7 +254,7 @@ pub async fn start_controllers(
 
                             let output = evaluator.evaluate_profile(&profile, &input);
 
-                            match profile.profile_kind {
+                            match profile.kind {
                                 ProfileKind::Ps4 => {
                                     let report = encoder.encode_ps4(&output);
                                     let _ = virtual_controller.get_ps4().update_ex(&report);

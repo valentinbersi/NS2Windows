@@ -1,8 +1,8 @@
 use crate::data::output_data::OutputData;
 use crate::encode::ds4_encoder::Ds4Encoder;
 use crate::encode::xbox_encoder::XboxEncoder;
-use vigem_rust::controller::ds4::Ds4ReportEx;
 use vigem_rust::X360Report;
+use vigem_rust::controller::ds4::Ds4ReportEx;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Encoder {

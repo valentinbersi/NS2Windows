@@ -6,20 +6,16 @@ use std::collections::HashMap;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Profile {
-    pub profile_name: String,
-    pub profile_kind: ProfileKind,
+    pub name: String,
+    pub kind: ProfileKind,
     pub outputs: HashMap<Output, Condition>,
 }
 
 impl Profile {
-    pub fn new(
-        profile_name: String,
-        kind: ProfileKind,
-        outputs: HashMap<Output, Condition>,
-    ) -> Self {
+    pub fn new(name: String, kind: ProfileKind, outputs: HashMap<Output, Condition>) -> Self {
         Self {
-            profile_name,
-            profile_kind: kind,
+            name,
+            kind,
             outputs,
         }
     }

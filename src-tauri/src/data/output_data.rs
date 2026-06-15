@@ -1,6 +1,6 @@
 use crate::data::output::Output;
-use std::collections::hash_map::IntoIter;
 use std::collections::HashMap;
+use std::collections::hash_map::IntoIter;
 use std::ops::Index;
 
 #[derive(Clone, Debug, Default, PartialEq)]

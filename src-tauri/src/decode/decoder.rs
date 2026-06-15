@@ -2,10 +2,10 @@ use crate::connection::motion_source::MotionSource;
 use crate::data::input_data::InputData;
 use crate::data::ns_input::NsInput;
 use crate::data::ns_input::NsInput::{
-    AccelBackward, AccelDown, AccelForward, AccelLeft, AccelRight, AccelUp, Capture, Chat, Down, Gl,
-    Gr, GyroPitchDown, GyroPitchUp, GyroRollLeft, GyroRollRight, GyroYawLeft, GyroYawRight, Home,
-    Left, LeftXMinus, LeftXPlus, LeftYMinus, LeftYPlus, Minus, Plus, Right, RightXMinus, RightXPlus, RightYMinus,
-    RightYPlus, Sl, Sr, Tl, Tr, Up, Zl, Zr, A, B, L, R, X, Y,
+    A, AccelBackward, AccelDown, AccelForward, AccelLeft, AccelRight, AccelUp, B, Capture, Chat,
+    Down, Gl, Gr, GyroPitchDown, GyroPitchUp, GyroRollLeft, GyroRollRight, GyroYawLeft,
+    GyroYawRight, Home, L, Left, LeftXMinus, LeftXPlus, LeftYMinus, LeftYPlus, Minus, Plus, R,
+    Right, RightXMinus, RightXPlus, RightYMinus, RightYPlus, Sl, Sr, Tl, Tr, Up, X, Y, Zl, Zr,
 };
 use bitflags::bitflags;
 use maplit::hashmap;
