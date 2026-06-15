@@ -1,4 +1,4 @@
-use crate::connection::connected_controller::ConnectedController;
+use crate::connection::connected_controller::NsController;
 use crate::connection::joy_con_side::JoyConSide;
 use crate::connection::motion_source::MotionSource;
 use crate::data::profile_kind::ProfileKind;
@@ -14,8 +14,8 @@ use tauri::State;
 use tokio::sync::Mutex;
 use tokio::time::sleep;
 use uuid::Uuid;
-use vigem_rust::TargetHandle;
 use vigem_rust::target::{DualShock4, Xbox360};
+use vigem_rust::TargetHandle;
 
 #[derive(Clone)]
 enum VirtualController {
@@ -87,7 +87,7 @@ pub async fn start_controllers(
             .map_err(|err| err.to_string())?;
 
             match &*connection.clone() {
-                ConnectedController::SingleJoyCon(joy_con) => {
+                NsController::SingleJoyCon(joy_con) => {
                     let peripheral = joy_con.device.peripheral.clone();
                     let input_char = joy_con.device.input_char.clone();
                     let joy_con_side = joy_con.joy_con_side;
@@ -125,7 +125,7 @@ pub async fn start_controllers(
                     });
                 }
 
-                ConnectedController::DualJoyCon(joy_cons) => {
+                NsController::DualJoyCon(joy_cons) => {
                     let left_buffer = Arc::new(Mutex::new(Arc::new(vec![])));
                     let right_buffer = Arc::new(Mutex::new(Arc::new(vec![])));
 
@@ -200,7 +200,7 @@ pub async fn start_controllers(
                     });
                 }
 
-                ConnectedController::ProController(controller) => {
+                NsController::ProController(controller) => {
                     let peripheral = controller.device.peripheral.clone();
                     let input_char = controller.device.input_char.clone();
 
@@ -234,7 +234,7 @@ pub async fn start_controllers(
                     });
                 }
 
-                ConnectedController::NsoGcController(controller) => {
+                NsController::NsoGcController(controller) => {
                     let peripheral = controller.device.peripheral.clone();
                     let input_char = controller.device.input_char.clone();
 

@@ -1,7 +1,7 @@
 use crate::communication::communicator::LedPatten;
 use crate::connection::connected_controller::{
-    ConnectedController, ConnectedDualJoyCon, ConnectedNsoGcController, ConnectedProController,
-    ConnectedSingleJoyCon,
+    ConnectedDualJoyCon, ConnectedNsoGcController, ConnectedProController, ConnectedSingleJoyCon,
+    NsController,
 };
 use crate::connection::joy_con_side::JoyConSide;
 use crate::connection::motion_source::MotionSource;
@@ -18,7 +18,7 @@ use uuid::Uuid;
 async fn connect_dual_joy_con(
     state: &State<'_, AppState>,
     app: &AppHandle,
-) -> Result<Arc<ConnectedController>, String> {
+) -> Result<Arc<NsController>, String> {
     app.emit("waiting_connection", ControllerKind::LeftJoyCon)
         .map_err(|err| err.to_string())?;
 
@@ -37,7 +37,7 @@ async fn connect_dual_joy_con(
         .await
         .map_err(|err| err.to_string())?;
 
-    let connected_controller = Arc::new(ConnectedController::DualJoyCon(ConnectedDualJoyCon {
+    let connected_controller = Arc::new(NsController::DualJoyCon(ConnectedDualJoyCon {
         left,
         right,
         motion_source: MotionSource::Right,
@@ -50,7 +50,7 @@ async fn connect_single_controller(
     state: &State<'_, AppState>,
     app: &AppHandle,
     controller_kind: ControllerKind,
-) -> Result<Arc<ConnectedController>, String> {
+) -> Result<Arc<NsController>, String> {
     app.emit("waiting_connection", controller_kind)
         .map_err(|err| err.to_string())?;
 
@@ -61,19 +61,19 @@ async fn connect_single_controller(
         .map_err(|err| err.to_string())?;
 
     let connected_controller = match controller_kind {
-        ControllerKind::LeftJoyCon => ConnectedController::SingleJoyCon(ConnectedSingleJoyCon {
+        ControllerKind::LeftJoyCon => NsController::SingleJoyCon(ConnectedSingleJoyCon {
             device,
             joy_con_side: JoyConSide::Left,
         }),
-        ControllerKind::RightJoyCon => ConnectedController::SingleJoyCon(ConnectedSingleJoyCon {
+        ControllerKind::RightJoyCon => NsController::SingleJoyCon(ConnectedSingleJoyCon {
             device,
             joy_con_side: JoyConSide::Right,
         }),
         ControllerKind::ProController => {
-            ConnectedController::ProController(ConnectedProController { device })
+            NsController::ProController(ConnectedProController { device })
         }
         ControllerKind::NsoGcController => {
-            ConnectedController::NsoGcController(ConnectedNsoGcController { device })
+            NsController::NsoGcController(ConnectedNsoGcController { device })
         }
         _ => return Err("Invalid State".to_string()),
     };
@@ -107,7 +107,7 @@ pub async fn connect_controller(
         .map_err(|err| err.to_string())?;
 
     match &*connected_controller {
-        ConnectedController::SingleJoyCon(joy_con) => {
+        NsController::SingleJoyCon(joy_con) => {
             joy_con
                 .device
                 .peripheral
@@ -136,7 +136,7 @@ pub async fn connect_controller(
                 .map_err(|err| err.to_string())?;
         }
 
-        ConnectedController::DualJoyCon(joy_cons) => {
+        NsController::DualJoyCon(joy_cons) => {
             joy_cons
                 .left
                 .peripheral
@@ -192,7 +192,7 @@ pub async fn connect_controller(
                 .map_err(|err| err.to_string())?;
         }
 
-        ConnectedController::ProController(controller) => {
+        NsController::ProController(controller) => {
             controller
                 .device
                 .peripheral
@@ -221,7 +221,7 @@ pub async fn connect_controller(
                 .map_err(|err| err.to_string())?;
         }
 
-        ConnectedController::NsoGcController(controller) => {
+        NsController::NsoGcController(controller) => {
             controller
                 .device
                 .peripheral
@@ -264,13 +264,13 @@ pub async fn get_connections(state: State<'_, AppState>) -> Result<Vec<Connectio
         .map(|(id, connected_controller)| Connection {
             id: *id,
             controller_kind: match &**connected_controller {
-                ConnectedController::SingleJoyCon(joy_con) => match joy_con.joy_con_side {
+                NsController::SingleJoyCon(joy_con) => match joy_con.joy_con_side {
                     JoyConSide::Left => ControllerKind::LeftJoyCon,
                     JoyConSide::Right => ControllerKind::RightJoyCon,
                 },
-                ConnectedController::DualJoyCon(_) => ControllerKind::DualJoyCons,
-                ConnectedController::ProController(_) => ControllerKind::ProController,
-                ConnectedController::NsoGcController(_) => ControllerKind::NsoGcController,
+                NsController::DualJoyCon(_) => ControllerKind::DualJoyCons,
+                NsController::ProController(_) => ControllerKind::ProController,
+                NsController::NsoGcController(_) => ControllerKind::NsoGcController,
             },
         })
         .collect())
@@ -282,14 +282,14 @@ pub async fn remove_connection(state: State<'_, AppState>, id: Uuid) -> Result<(
 
     if let Some(controller) = controller {
         match &*controller {
-            ConnectedController::SingleJoyCon(joy_con) => joy_con
+            NsController::SingleJoyCon(joy_con) => joy_con
                 .device
                 .peripheral
                 .disconnect()
                 .await
                 .map_err(|err| err.to_string())?,
 
-            ConnectedController::DualJoyCon(joy_cons) => {
+            NsController::DualJoyCon(joy_cons) => {
                 joy_cons
                     .left
                     .peripheral
@@ -304,14 +304,14 @@ pub async fn remove_connection(state: State<'_, AppState>, id: Uuid) -> Result<(
                     .map_err(|err| err.to_string())?
             }
 
-            ConnectedController::ProController(controller) => controller
+            NsController::ProController(controller) => controller
                 .device
                 .peripheral
                 .disconnect()
                 .await
                 .map_err(|err| err.to_string())?,
 
-            ConnectedController::NsoGcController(controller) => controller
+            NsController::NsoGcController(controller) => controller
                 .device
                 .peripheral
                 .disconnect()

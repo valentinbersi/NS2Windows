@@ -66,20 +66,20 @@ impl ConnectedNsoGcController {
 }
 
 #[derive(Clone, Debug)]
-pub enum ConnectedController {
+pub enum NsController {
     SingleJoyCon(ConnectedSingleJoyCon),
     DualJoyCon(ConnectedDualJoyCon),
     ProController(ConnectedProController),
     NsoGcController(ConnectedNsoGcController),
 }
 
-impl ConnectedController {
+impl NsController {
     pub async fn disconnect(&self) -> btleplug::Result<()> {
         match self {
-            ConnectedController::SingleJoyCon(joy_con) => joy_con.disconnect().await,
-            ConnectedController::DualJoyCon(joy_cons) => joy_cons.disconnect().await,
-            ConnectedController::ProController(controller) => controller.disconnect().await,
-            ConnectedController::NsoGcController(controller) => controller.disconnect().await,
+            NsController::SingleJoyCon(joy_con) => joy_con.disconnect().await,
+            NsController::DualJoyCon(joy_cons) => joy_cons.disconnect().await,
+            NsController::ProController(controller) => controller.disconnect().await,
+            NsController::NsoGcController(controller) => controller.disconnect().await,
         }
     }
 }
