@@ -10,6 +10,7 @@
     import JoyConLeftIcon from "./icons/JoyConLeftIcon.svelte";
     import JoyConRightIcon from "./icons/JoyConRightIcon.svelte";
     import ProControllerIcon from "./icons/ProControllerIcon.svelte";
+    import GcControllerIcon from "./icons/GcControllerIcon.svelte";
 
     import LeftJoyConInput from "./LeftJoyConInput.svelte";
     import RightJoyConInput from "./RightJoyConInput.svelte";
@@ -98,7 +99,7 @@
             case ControllerKind.ProController:
                 return ProControllerIcon;
             case ControllerKind.NsoGcController:
-                return ProControllerIcon;
+                return GcControllerIcon;
             default:
                 return ProControllerIcon;
         }
@@ -184,8 +185,8 @@
                                 Please wait...
                             </p>
                             <div class="waiting-icon">
-                                <svelte:component this={getIconForKind(configuringFor)} width="64" height="64"
-                                                  fill="var(--accent-color)"/>
+                                <svelte:component this={getIconForKind(configuringFor)} width="64" height="64"/>
+                                <!--                                                  fill="var(&#45;&#45;accent-color)"-->
                             </div>
                         {:else if waitingFor}
                             <p class="waiting-prompt">
@@ -193,8 +194,9 @@
                                 Please press any button on the device to pair it.
                             </p>
                             <div class="waiting-icon">
-                                <svelte:component this={getIconForKind(waitingFor)} width="64" height="64"
-                                                  fill="var(--accent-color)"/>
+                                <svelte:component this={getIconForKind(waitingFor)} width="64" height="64"/>
+                                <!--                                                  fill="var(&#45;&#45;accent-color)"-->
+
                             </div>
                         {:else}
                             <p class="waiting-prompt">Initializing connection...</p>
