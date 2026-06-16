@@ -38,6 +38,7 @@ impl NsController {
     }
 
     pub async fn disconnect(&self) -> btleplug::Result<()> {
+        self.input_informer.abort();
         self.device.disconnect().await
     }
 }
