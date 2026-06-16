@@ -6,8 +6,8 @@
 
     import JoyConLeftIcon from "./icons/JoyConLeftIcon.svelte";
     import JoyConRightIcon from "./icons/JoyConRightIcon.svelte";
-    import DualJoyConsIcon from "./icons/DualJoyConsIcon.svelte";
     import ProControllerIcon from "./icons/ProControllerIcon.svelte";
+    import GcControllerIcon from "./icons/GcControllerIcon.svelte";
     import Ps4Icon from "./icons/Ps4Icon.svelte";
     import Xbox360Icon from "./icons/Xbox360Icon.svelte";
 
@@ -102,8 +102,8 @@
         switch (kind) {
             case ControllerKind.LeftJoyCon: return JoyConLeftIcon;
             case ControllerKind.RightJoyCon: return JoyConRightIcon;
-            case ControllerKind.DualJoyCons: return DualJoyConsIcon;
-            case ControllerKind.ProNsoGcController: return ProControllerIcon;
+            case ControllerKind.ProController: return ProControllerIcon;
+            case ControllerKind.NsoGcController: return GcControllerIcon;
             default: return ProControllerIcon;
         }
     }

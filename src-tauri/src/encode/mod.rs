@@ -1,3 +1,2 @@
-mod ds4_encoder;
-pub mod encoder;
-mod xbox_encoder;
+pub mod ds4_encoder;
+pub mod xbox_encoder;

@@ -1,5 +1,6 @@
 pub mod input_data;
 pub mod motion_data;
+pub mod ns_controller_kind;
 pub mod ns_input;
 pub mod output;
 pub mod output_data;
