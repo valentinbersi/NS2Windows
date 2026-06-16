@@ -27,12 +27,16 @@ pub enum NsInputType {
     R,
     #[sea_orm(string_value = "Zr")]
     Zr,
+    #[sea_orm(string_value = "Z")]
+    Z,
     #[sea_orm(string_value = "Tr")]
     Tr,
     #[sea_orm(string_value = "Sr")]
     Sr,
     #[sea_orm(string_value = "Gr")]
     Gr,
+    #[sea_orm(string_value = "RTrigger")]
+    RTrigger,
 
     // ----------- Left buttons -----------
     #[sea_orm(string_value = "L")]
@@ -45,12 +49,16 @@ pub enum NsInputType {
     Sl,
     #[sea_orm(string_value = "Gl")]
     Gl,
+    #[sea_orm(string_value = "LTrigger")]
+    LTrigger,
 
     // ----------- Menu buttons -----------
     #[sea_orm(string_value = "Plus")]
     Plus,
     #[sea_orm(string_value = "Minus")]
     Minus,
+    #[sea_orm(string_value = "StartPause")]
+    StartPause,
 
     // ----------- D pad buttons -----------
     #[sea_orm(string_value = "Down")]
@@ -162,6 +170,12 @@ impl From<NsInput> for NsInputType {
             NsInput::GyroRollRight => NsInputType::GyroRollRight,
             NsInput::GyroYawLeft => NsInputType::GyroYawLeft,
             NsInput::GyroYawRight => NsInputType::GyroYawRight,
+
+            NsInput::Z => NsInputType::Z,
+            NsInput::StartPause => NsInputType::StartPause,
+
+            NsInput::RTrigger => NsInputType::RTrigger,
+            NsInput::LTrigger => NsInputType::LTrigger,
         }
     }
 }
@@ -212,6 +226,10 @@ impl From<NsInputType> for NsInput {
             NsInputType::GyroRollRight => NsInput::GyroRollRight,
             NsInputType::GyroYawLeft => NsInput::GyroYawLeft,
             NsInputType::GyroYawRight => NsInput::GyroYawRight,
+            NsInputType::Z => NsInput::Z,
+            NsInputType::StartPause => NsInput::StartPause,
+            NsInputType::RTrigger => NsInput::RTrigger,
+            NsInputType::LTrigger => NsInput::LTrigger,
         }
     }
 }

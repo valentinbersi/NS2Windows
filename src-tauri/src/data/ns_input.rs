@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum NsInput {
@@ -17,9 +16,11 @@ pub enum NsInput {
     // ----------- Right buttons -----------
     R,
     Zr,
+    Z,
     Tr,
     Sr,
     Gr,
+    RTrigger,
 
     // ----------- Left buttons -----------
     L,
@@ -27,10 +28,12 @@ pub enum NsInput {
     Tl,
     Sl,
     Gl,
+    LTrigger,
 
     // ----------- Menu buttons -----------
     Plus,
     Minus,
+    StartPause,
 
     // ----------- D pad buttons -----------
     Down,
