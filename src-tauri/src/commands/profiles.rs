@@ -1,5 +1,5 @@
 use crate::profiles::profile::Profile;
-use crate::state::AppState;
+use crate::state::app_state::AppState;
 use tauri::State;
 
 #[tauri::command]
