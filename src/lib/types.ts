@@ -36,9 +36,9 @@ export interface EmulatedController {
 
 export type NsInput =
     | "B" | "A" | "Y" | "X" | "Home" | "Capture" | "Chat"
-    | "R" | "Zr" | "Tr" | "Sr" | "Gr"
-    | "L" | "Zl" | "Tl" | "Sl" | "Gl"
-    | "Plus" | "Minus"
+    | "R" | "Zr" | "Z" | "Tr" | "Sr" | "Gr" | "RTrigger"
+    | "L" | "Zl" | "Tl" | "Sl" | "Gl" | "LTrigger"
+    | "Plus" | "Minus" | "StartPause"
     | "Down" | "Left" | "Right" | "Up"
     | "LeftXMinus" | "LeftXPlus" | "LeftYMinus" | "LeftYPlus"
     | "RightXMinus" | "RightXPlus" | "RightYMinus" | "RightYPlus"
@@ -77,9 +77,9 @@ export const CONTROLLER_KIND_LABELS: Record<ControllerKind, string> = {
 export const NS_INPUT_LABELS: Record<NsInput, string> = {
     B: "B", A: "A", Y: "Y", X: "X",
     Home: "Home", Capture: "Capture", Chat: "Chat",
-    R: "R", Zr: "ZR", Tr: "TR", Sr: "SR", Gr: "GR",
-    L: "L", Zl: "ZL", Tl: "TL", Sl: "SL", Gl: "GL",
-    Plus: "Plus", Minus: "Minus",
+    R: "R", Zr: "ZR", Z: "Z", Tr: "TR", Sr: "SR", Gr: "GR", RTrigger: "R Trigger (Analog)",
+    L: "L", Zl: "ZL", Tl: "TL", Sl: "SL", Gl: "GL", LTrigger: "L Trigger (Analog)",
+    Plus: "Plus", Minus: "Minus", StartPause: "Start/Pause",
     Down: "D-Pad Down", Left: "D-Pad Left", Right: "D-Pad Right", Up: "D-Pad Up",
     LeftXMinus: "Left Stick Left", LeftXPlus: "Left Stick Right",
     LeftYMinus: "Left Stick Down", LeftYPlus: "Left Stick Up",
