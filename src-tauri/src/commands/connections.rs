@@ -100,3 +100,12 @@ pub async fn connect_controller(
 
     Ok(id)
 }
+
+#[tauri::command]
+pub async fn disconnect_controller(state: State<'_, AppState>, id: Uuid) -> Result<(), String> {
+    state
+        .remove_connected_controller(&id)
+        .await
+        .map_err(|err| err.to_string())?
+        .ok_or_else(|| format!("Could not find controller with id {id}"))
+}
