@@ -4,6 +4,11 @@ NS2Windows is a desktop application built with Tauri, SvelteKit, and Rust that a
 Nintendo Switch 2 controllers on your Windows PC. The app emulates your connected devices as standard XInput (Xbox 360)
 or DualShock 4 (PS4) controllers, ensuring maximum compatibility with PC games.
 
+## Installation
+
+Access the releases section of this page and download the .msi installer for the last version. Execute it, and it will
+guide you through the installation process.
+
 ## Features
 
 The application is built around three main steps:
@@ -14,7 +19,6 @@ Seamlessly pair your Nintendo Switch 2 controllers to your PC via Bluetooth.
 Supported devices include:
 
 * Joy-Cons (Left and Right)
-* Dual Joy-Cons (Combined as a single controller)
 * Nintendo Switch Pro Controller
 * Nintendo Switch Online GameCube Controller
 
@@ -51,14 +55,15 @@ start the emulation process, running all defined controllers in the background t
 <table>
   <tr>
     <td width="50%"><img src="imgs/controllers_tab.png" alt="Controllers Tab" /></td>
+    <td width="50%"><img src="imgs/controllers_add_virtual_controller.png" alt="Controllers Tab" /></td>
+  </tr>
+  <tr>
     <td width="50%"><img src="imgs/controllers_select_device.png" alt="Select Device" /></td>
-  </tr>
-  <tr>
     <td width="50%"><img src="imgs/controllers_select_profile.png" alt="Select Profile" /></td>
-    <td width="50%"><img src="imgs/controllers_added.png" alt="Controllers Added" /></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><img src="imgs/controllers_running.png" alt="Controllers Running" width="50%" /></td>
+    <td width="50%"><img src="imgs/controllers_added.png" alt="Controllers Added" /></td>
+    <td width="50%"><img src="imgs/controllers_running.png" alt="Controllers Running"/></td>
   </tr>
 </table>
 
@@ -69,4 +74,6 @@ start the emulation process, running all defined controllers in the background t
   controllers).
 
 ## Acknowledgments
-The decoding of Nintendo Switch 2 controller inputs in this project was mostly inspired by the work done in [TheFrano/joycon2cpp](https://github.com/TheFrano/joycon2cpp).
+
+The decoding of Nintendo Switch 2 controller inputs in this project was mostly inspired by the work done
+in [TheFrano/joycon2cpp](https://github.com/TheFrano/joycon2cpp).
