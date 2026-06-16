@@ -91,4 +91,15 @@ impl AppState {
             .remove(id)
             .map(|_| ())
     }
+
+    pub async fn cleanup(&self) -> Result<(), String> {
+        for controller in self.connected_controllers.read().await.values() {
+            controller
+                .disconnect()
+                .await
+                .map_err(|err| err.to_string())?;
+        }
+
+        Ok(())
+    }
 }
