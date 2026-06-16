@@ -1,22 +1,19 @@
-use crate::commands::connections::{connect_controller, get_connections, remove_connection};
-use crate::commands::controllers::start_controllers;
+use crate::commands::connections::{connect_controller, disconnect_controller};
+use crate::commands::controllers::{start_controller, stop_controller};
 use crate::commands::profiles::{
     delete_profile, find_profile_by_name, profile_names, save_profile,
 };
 use crate::communication::communicator::BluetoothCommunicator;
 use crate::connection::connector::BluetoothConnector;
 use crate::repositories::profile_repository::ProfileRepository;
-use crate::state::AppState;
+use crate::state::app_state::AppState;
 use btleplug::api::Manager as BManager;
-use futures::executor::block_on;
-use maplit::hashmap;
 use migration::{Migrator, MigratorTrait};
 use sea_orm::Database;
 use std::error::Error;
 use std::fs;
 use std::fs::File;
 use tauri::{App, AppHandle, Manager as TManager, RunEvent};
-use tokio::sync::RwLock;
 use vigem_rust::Client;
 
 pub mod commands;
@@ -60,30 +57,31 @@ fn setup(app: &mut App) -> Result<(), Box<dyn Error>> {
 
     let vigem_client = Client::connect()?;
 
-    app.manage(AppState {
-        profile_repository: ProfileRepository::new(db),
-        connector: BluetoothConnector::new(adapter),
-        communicator: BluetoothCommunicator,
-        connected_controllers: RwLock::new(hashmap!()),
+    app.manage(AppState::new(
+        ProfileRepository::new(db),
+        BluetoothConnector::new(adapter),
+        BluetoothCommunicator,
         vigem_client,
-    });
+    ));
 
     Ok(())
 }
 
 fn event_loop(app_handle: &AppHandle, event: RunEvent) {
-    if let RunEvent::ExitRequested { .. } = event {
-        block_on(async move {
-            for controller in app_handle
-                .state::<AppState>()
-                .connected_controllers
-                .read()
-                .await
-                .values()
-            {
-                _ = controller.disconnect().await;
-            }
-        });
+    let state = app_handle.state::<AppState>();
+
+    match event {
+        RunEvent::Exit => {}
+        RunEvent::ExitRequested { .. } => {
+            let _ = tauri::async_runtime::block_on(state.cleanup());
+        }
+        RunEvent::WindowEvent { .. } => {}
+        RunEvent::WebviewEvent { .. } => {}
+        RunEvent::Ready => {}
+        RunEvent::Resumed => {}
+        RunEvent::MainEventsCleared => {}
+        RunEvent::MenuEvent(_) => {}
+        _ => {}
     }
 }
 
@@ -92,14 +90,14 @@ pub fn run() -> tauri::Result<()> {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
+            connect_controller,
+            disconnect_controller,
+            start_controller,
+            stop_controller,
             save_profile,
             delete_profile,
             find_profile_by_name,
             profile_names,
-            connect_controller,
-            get_connections,
-            remove_connection,
-            start_controllers,
         ])
         .setup(setup)
         .build(tauri::generate_context!())?

@@ -8,8 +8,8 @@
     export let onBack: () => void;
 
     let profile: Profile = {
-        profile_name: "",
-        profile_kind: ProfileKind.Ps4,
+        name: "",
+        kind: ProfileKind.Ps4,
         outputs: {}
     };
 
@@ -17,7 +17,7 @@
 
     // Derived list of outputs based on kind
     $: activeOutputs = Object.entries(
-        profile.profile_kind === ProfileKind.Ps4 ? PS4_OUTPUT_LABELS : XBOX360_OUTPUT_LABELS
+        profile.kind === ProfileKind.Ps4 ? PS4_OUTPUT_LABELS : XBOX360_OUTPUT_LABELS
     )
         .filter(([_, label]) => label !== null)
         .map(([key, label]) => ({ key: key as Output, label: label as string }));
@@ -34,8 +34,8 @@
                 if (existing) {
                     // Rust serializes enums without wrapping if configured, but let's assume it matches our interface.
                     profile = {
-                        profile_name: existing.profile_name,
-                        profile_kind: existing.profile_kind,
+                        name: existing.name,
+                        kind: existing.kind,
                         // Ensure outputs is at least an empty object
                         outputs: existing.outputs || {}
                     };
@@ -48,7 +48,7 @@
     });
 
     async function handleSave() {
-        if (!profile.profile_name.trim()) {
+        if (!profile.name.trim()) {
             alert("Profile name cannot be empty");
             return;
         }
@@ -97,7 +97,7 @@
                 <input 
                     id="profileName" 
                     type="text" 
-                    bind:value={profile.profile_name} 
+                    bind:value={profile.name} 
                     placeholder="e.g. Smash Bros layout"
                     disabled={profileName !== null} 
                 />
@@ -108,7 +108,7 @@
 
             <div class="input-group">
                 <label for="profileKind">Emulated Controller Type</label>
-                <select id="profileKind" bind:value={profile.profile_kind}>
+                <select id="profileKind" bind:value={profile.kind}>
                     <option value={ProfileKind.Ps4}>PlayStation 4</option>
                     <option value={ProfileKind.Xbox360}>Xbox 360</option>
                 </select>
@@ -117,13 +117,13 @@
 
         <div class="mapping-section">
             <h3>Input Mapping</h3>
-            <p class="subtitle">Map Nintendo Switch inputs to virtual {profile.profile_kind} outputs.</p>
+            <p class="subtitle">Map Nintendo Switch inputs to virtual {profile.kind} outputs.</p>
 
             <div class="table-container">
                 <table>
                     <thead>
                         <tr>
-                            <th>Virtual Output ({profile.profile_kind})</th>
+                            <th>Virtual Output ({profile.kind})</th>
                             <th>Nintendo Switch Input</th>
                         </tr>
                     </thead>

@@ -70,15 +70,14 @@ impl ProfileRepository {
     pub async fn save_profile(&self, profile: Profile) -> Result<(), DbErr> {
         let txn = self.db.begin().await?;
 
-        self.inner_delete_profile(&txn, &profile.profile_name)
-            .await?;
+        self.inner_delete_profile(&txn, &profile.name).await?;
 
         let id = Uuid::now_v7();
 
         profile::ActiveModel {
             id: Set(id),
-            kind: Set(profile.profile_kind.into()),
-            name: Set(profile.profile_name),
+            kind: Set(profile.kind.into()),
+            name: Set(profile.name),
         }
         .insert(&txn)
         .await?;

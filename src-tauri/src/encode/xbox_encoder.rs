@@ -15,7 +15,7 @@ struct StickData {
 }
 
 impl XboxEncoder {
-    const STICK_CENTER: i16 = 0;
+    //const STICK_CENTER: i16 = 0;
 
     fn axis(&self, data: &OutputData, minus: Output, plus: Output) -> f32 {
         let minus = data.get(minus).unwrap_or(0_f32);

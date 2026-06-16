@@ -1,9 +1,10 @@
 use crate::data::ns_input::NsInput;
+use serde::{Deserialize, Serialize};
 use std::collections::hash_map::IntoIter;
 use std::collections::HashMap;
 use std::ops::Index;
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct InputData {
     inputs: HashMap<NsInput, f32>,
 }

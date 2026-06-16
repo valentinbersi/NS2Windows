@@ -1,4 +1,4 @@
-use crate::connection::connected_controller::ConnectedDevice;
+use crate::connection::connected_device::ConnectedDevice;
 use btleplug::api::{Central, CentralEvent, ConnectionParameterPreset, Peripheral, ScanFilter};
 use btleplug::platform::Adapter;
 use futures::StreamExt;
