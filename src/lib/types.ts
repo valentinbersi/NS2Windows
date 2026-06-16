@@ -6,7 +6,6 @@ export enum ProfileKind {
 export enum ControllerKind {
     LeftJoyCon = "LeftJoyCon",
     RightJoyCon = "RightJoyCon",
-    DualJoyCons = "DualJoyCons",
     ProController = "ProController",
     NsoGcController = "NsoGcController",
 }
@@ -14,6 +13,25 @@ export enum ControllerKind {
 export interface Connection {
     id: string;
     controller_kind: ControllerKind;
+}
+
+export interface SingleController {
+    id: string;
+}
+
+export interface DualJoyCon {
+    left_id: string;
+    right_id: string;
+    motion_source: "Left" | "Right";
+}
+
+export type NsConnectedController = 
+    | { SingleController: SingleController }
+    | { DualJoyCon: DualJoyCon };
+
+export interface EmulatedController {
+    profile_name: string;
+    connected_controller: NsConnectedController;
 }
 
 export type NsInput =
@@ -52,7 +70,6 @@ export interface Profile {
 export const CONTROLLER_KIND_LABELS: Record<ControllerKind, string> = {
     [ControllerKind.LeftJoyCon]: "Left Joy-Con",
     [ControllerKind.RightJoyCon]: "Right Joy-Con",
-    [ControllerKind.DualJoyCons]: "Dual Joy-Cons",
     [ControllerKind.ProController]: "Pro Controller",
     [ControllerKind.NsoGcController]: "NSO GC Controller",
 };
