@@ -19,7 +19,7 @@ pub async fn connect_controller(
     let id = Uuid::now_v7();
 
     // Alert waiting of connection
-    app.emit("waiting connection", (id, kind))
+    app.emit("waiting-connection", (id, kind))
         .map_err(|err| err.to_string())?;
 
     // Wait for a controller
@@ -30,7 +30,7 @@ pub async fn connect_controller(
         .map_err(|err| err.to_string())?;
 
     // Alert start of connection configuration
-    app.emit("configuring connection", (id, kind))
+    app.emit("configuring-connection", (id, kind))
         .map_err(|err| err.to_string())?;
 
     // Suscribe to input listening
@@ -90,7 +90,7 @@ pub async fn connect_controller(
             };
 
             // Report
-            let _ = app.emit("update input", (id, input));
+            let _ = app.emit("update-input", (id, input));
         }
     });
 
