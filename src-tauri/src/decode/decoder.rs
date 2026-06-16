@@ -89,8 +89,8 @@ bitflags! {
         const X = 0x02_00_00;
         const B = 0x04_00_00;
         const A = 0x08_00_00;
-        const R = 0x04_00_00;
-        const Z = 0x08_00_00;
+        const R = 0x40_00_00;
+        const Z = 0x80_00_00;
     }
 }
 
