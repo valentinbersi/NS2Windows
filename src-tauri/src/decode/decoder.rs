@@ -3,8 +3,9 @@ use crate::data::ns_input::NsInput;
 use crate::data::ns_input::NsInput::{
     AccelBackward, AccelDown, AccelForward, AccelLeft, AccelRight, AccelUp, Capture, Chat, Down, Gl,
     Gr, GyroPitchDown, GyroPitchUp, GyroRollLeft, GyroRollRight, GyroYawLeft, GyroYawRight, Home,
-    Left, LeftXMinus, LeftXPlus, LeftYMinus, LeftYPlus, Minus, Plus, Right, RightXMinus, RightXPlus, RightYMinus,
-    RightYPlus, Sl, Sr, Tl, Tr, Up, Zl, Zr, A, B, L, R, X, Y,
+    LTrigger, Left, LeftXMinus, LeftXPlus, LeftYMinus, LeftYPlus, Minus, Plus, RTrigger, Right,
+    RightXMinus, RightXPlus, RightYMinus, RightYPlus, Sl, Sr, StartPause, Tl, Tr, Up, Zl,
+    Zr, A, B, L, R, X, Y, Z,
 };
 use crate::dtos::motion_source::MotionSource;
 use bitflags::bitflags;
@@ -14,9 +15,10 @@ use std::ops::RangeInclusive;
 
 const LEFT_BUTTONS_RANGE: RangeInclusive<usize> = 0x05..=0x06;
 const RIGHT_BUTTONS_RANGE: RangeInclusive<usize> = 0x04..=0x05;
+const NSO_GC_BUTTONS_RANGE: RangeInclusive<usize> = 0x04..=0x06;
 
 const LEFT_STICK_RANGE: RangeInclusive<usize> = 10..=12;
-const RIGHT_STICK_RANGE: RangeInclusive<usize> = 13..=16;
+const RIGHT_STICK_RANGE: RangeInclusive<usize> = 13..=15;
 
 bitflags! {
     #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -69,6 +71,26 @@ bitflags! {
         const A = 0x000800000000;
         const R = 0x004000000000;
         const Zr = 0x008000000000;
+    }
+
+    #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    struct NsoGcControllerButtonMasks: u32 {
+        const Down = 0x00_00_01;
+        const Up = 0x00_00_02;
+        const Right = 0x00_00_04;
+        const Left = 0x00_00_08;
+        const L = 0x00_00_40;
+        const Zl = 0x00_00_80;
+        const StartPause = 0x00_02_00;
+        const Home = 0x00_10_00;
+        const Capture = 0x00_20_00;
+        const Chat = 0x00_40_00;
+        const Y = 0x01_00_00;
+        const X = 0x02_00_00;
+        const B = 0x04_00_00;
+        const A = 0x08_00_00;
+        const R = 0x04_00_00;
+        const Z = 0x08_00_00;
     }
 }
 
@@ -249,12 +271,12 @@ impl Decoder {
     }
 
     fn decode_gc_buttons(&self, buffer: &[u8]) -> HashMap<NsInput, f32> {
-        let mut state = 0;
-        for i in 3..=8 {
-            state = (state << 8) | (buffer[i] as u64)
-        }
+        let mut state = vec![0];
+        state.extend_from_slice(&buffer[NSO_GC_BUTTONS_RANGE]);
 
-        let from_flag = |flag: ProControllerButtonMasks| {
+        let state = u32::from_be_bytes(state.try_into().unwrap());
+
+        let from_flag = |flag: NsoGcControllerButtonMasks| {
             if state & flag.bits() != 0 {
                 1_f32
             } else {
@@ -263,29 +285,22 @@ impl Decoder {
         };
 
         hashmap! {
-            B => from_flag(ProControllerButtonMasks::B),
-            A => from_flag(ProControllerButtonMasks::A),
-            Y => from_flag(ProControllerButtonMasks::Y),
-            X => from_flag(ProControllerButtonMasks::X),
-
-            Home => 0_f32,
-            Capture => 0_f32,
-
-            R => from_flag(ProControllerButtonMasks::R),
-            Tr => from_flag(ProControllerButtonMasks::Tr),
-            Gr => 0_f32,
-
-            L => from_flag(ProControllerButtonMasks::L),
-            Tl => from_flag(ProControllerButtonMasks::Tl),
-            Gl => 0_f32,
-
-            Plus => from_flag(ProControllerButtonMasks::Plus),
-            Minus => from_flag(ProControllerButtonMasks::Minus),
-
-            Down => from_flag(ProControllerButtonMasks::Down),
-            Left => from_flag(ProControllerButtonMasks::Left),
-            Right => from_flag(ProControllerButtonMasks::Right),
-            Up => from_flag(ProControllerButtonMasks::Up),
+            Down => from_flag(NsoGcControllerButtonMasks::Down),
+            Up => from_flag(NsoGcControllerButtonMasks::Up),
+            Right => from_flag(NsoGcControllerButtonMasks::Right),
+            Left => from_flag(NsoGcControllerButtonMasks::Left),
+            L => from_flag(NsoGcControllerButtonMasks::L),
+            Zl => from_flag(NsoGcControllerButtonMasks::Zl),
+            StartPause => from_flag(NsoGcControllerButtonMasks::StartPause),
+            Home => from_flag(NsoGcControllerButtonMasks::Home),
+            Capture => from_flag(NsoGcControllerButtonMasks::Capture),
+            Chat => from_flag(NsoGcControllerButtonMasks::Chat),
+            Y => from_flag(NsoGcControllerButtonMasks::Y),
+            X => from_flag(NsoGcControllerButtonMasks::X),
+            B => from_flag(NsoGcControllerButtonMasks::B),
+            A => from_flag(NsoGcControllerButtonMasks::A),
+            R => from_flag(NsoGcControllerButtonMasks::R),
+            Z => from_flag(NsoGcControllerButtonMasks::Z),
         }
     }
 
@@ -338,10 +353,29 @@ impl Decoder {
         }
     }
 
+    fn decode_calibrated_gc_trigger(&self, raw: u8) -> f32 {
+        const LOWER_BOUND: u8 = 0x28;
+        const UPPER_BOUND: u8 = 0xDD;
+
+        if raw <= LOWER_BOUND {
+            0_f32
+        } else if raw >= UPPER_BOUND {
+            1_f32
+        } else {
+            let adjusted = raw - LOWER_BOUND;
+            let range = UPPER_BOUND - LOWER_BOUND;
+
+            adjusted as f32 / range as f32
+        }
+    }
+
     fn decode_gc_triggers(&self, buffer: &[u8]) -> HashMap<NsInput, f32> {
+        let l_trigger = self.decode_calibrated_gc_trigger(buffer[0x3c]);
+        let r_trigger = self.decode_calibrated_gc_trigger(buffer[0x3d]);
+
         hashmap! {
-            Zl => buffer[0x3c] as f32 / 255_f32,
-            Zr => buffer[0x3d] as f32 / 255_f32,
+            LTrigger => l_trigger,
+            RTrigger => r_trigger,
         }
     }
 
@@ -394,7 +428,7 @@ impl Decoder {
 
     pub fn decode_gc_controller(&self, buffer: &[u8]) -> InputData {
         let mut inputs = self.decode_dual_joysticks(buffer);
-        inputs.extend(self.decode_pro_buttons(buffer));
+        inputs.extend(self.decode_gc_buttons(buffer));
         // inputs.extend(self.decode_mouse_coords(buffer));
         inputs.extend(self.decode_motion(buffer));
         inputs.extend(self.decode_gc_triggers(buffer));
