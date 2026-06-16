@@ -156,7 +156,7 @@ impl Decoder {
         };
 
         hashmap! {
-            Capture => 0_f32,
+            Capture => from_flag(LeftJoyConButtonMasks::Capture),
 
             Sr => from_flag(LeftJoyConButtonMasks::Sr),
 
