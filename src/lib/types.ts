@@ -62,8 +62,8 @@ export interface Condition {
 }
 
 export interface Profile {
-    profile_name: string;
-    profile_kind: ProfileKind;
+    name: string;
+    kind: ProfileKind;
     outputs: Partial<Record<Output, Condition>>;
 }
 
@@ -174,3 +174,12 @@ export const XBOX360_OUTPUT_LABELS: Record<Output, string | null> = {
     GyroYawLeft: null,
     GyroYawRight: null,
 };
+
+export interface VirtualControllerState {
+    id: string; // Frontend UUID
+    profile_name: string | null;
+    bound_controllers: Connection[];
+    is_running: boolean;
+    emulated_controller_id: string | null; // Backend UUID when running
+    motion_source: "Left" | "Right"; // For Dual Joy-Con
+}
