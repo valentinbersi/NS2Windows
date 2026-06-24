@@ -16,7 +16,6 @@ pub enum NsInput {
     // ----------- Right buttons -----------
     R,
     Zr,
-    Z,
     Tr,
     Sr,
     Gr,
@@ -33,7 +32,6 @@ pub enum NsInput {
     // ----------- Menu buttons -----------
     Plus,
     Minus,
-    StartPause,
 
     // ----------- D pad buttons -----------
     Down,
