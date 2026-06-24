@@ -70,7 +70,7 @@ export interface Profile {
 export const CONTROLLER_KIND_LABELS: Record<ControllerKind, string> = {
     [ControllerKind.LeftJoyCon]: "Left Joy-Con",
     [ControllerKind.RightJoyCon]: "Right Joy-Con",
-    [ControllerKind.ProController]: "Pro Controller",
+    [ControllerKind.ProController]: "Pro Controller (Beta)",
     [ControllerKind.NsoGcController]: "NSO GC Controller",
 };
 
