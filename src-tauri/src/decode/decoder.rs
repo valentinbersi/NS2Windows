@@ -1,12 +1,5 @@
 use crate::data::input_data::InputData;
 use crate::data::ns_input::NsInput;
-use crate::data::ns_input::NsInput::{
-    AccelBackward, AccelDown, AccelForward, AccelLeft, AccelRight, AccelUp, Capture, Chat, Down, Gl,
-    Gr, GyroPitchDown, GyroPitchUp, GyroRollLeft, GyroRollRight, GyroYawLeft, GyroYawRight, Home,
-    LTrigger, Left, LeftXMinus, LeftXPlus, LeftYMinus, LeftYPlus, Minus, Plus, RTrigger, Right,
-    RightXMinus, RightXPlus, RightYMinus, RightYPlus, Sl, Sr, StartPause, Tl, Tr, Up, Zl,
-    Zr, A, B, L, R, X, Y, Z,
-};
 use crate::dtos::motion_source::MotionSource;
 use bitflags::bitflags;
 use maplit::hashmap;
@@ -136,10 +129,10 @@ impl Decoder {
         let stick = self.decode_joystick(&buffer[LEFT_STICK_RANGE]);
 
         hashmap! {
-            LeftXMinus => stick.x.clamp(-1_f32, 0_f32),
-            LeftXPlus => stick.x.clamp(0_f32, 1_f32),
-            LeftYMinus => stick.y.clamp(-1_f32, 0_f32),
-            LeftYPlus => stick.y.clamp(0_f32, 1_f32),
+            NsInput::LeftXMinus => stick.x.clamp(-1_f32, 0_f32),
+            NsInput::LeftXPlus => stick.x.clamp(0_f32, 1_f32),
+            NsInput::LeftYMinus => stick.y.clamp(-1_f32, 0_f32),
+            NsInput::LeftYPlus => stick.y.clamp(0_f32, 1_f32),
         }
     }
 
@@ -151,10 +144,10 @@ impl Decoder {
         let stick = self.decode_joystick(&buffer[RIGHT_STICK_RANGE]);
 
         hashmap! {
-            RightXMinus => stick.x.clamp(-1_f32, 0_f32),
-            RightXPlus => stick.x.clamp(0_f32, 1_f32),
-            RightYMinus => stick.y.clamp(-1_f32, 0_f32),
-            RightYPlus => stick.y.clamp(0_f32, 1_f32),
+            NsInput::RightXMinus => stick.x.clamp(-1_f32, 0_f32),
+            NsInput::RightXPlus => stick.x.clamp(0_f32, 1_f32),
+            NsInput::RightYMinus => stick.y.clamp(-1_f32, 0_f32),
+            NsInput::RightYPlus => stick.y.clamp(0_f32, 1_f32),
         }
     }
 
@@ -178,21 +171,21 @@ impl Decoder {
         };
 
         hashmap! {
-            Capture => from_flag(LeftJoyConButtonMasks::Capture),
+            NsInput::Capture => from_flag(LeftJoyConButtonMasks::Capture),
 
-            Sr => from_flag(LeftJoyConButtonMasks::Sr),
+            NsInput::Sr => from_flag(LeftJoyConButtonMasks::Sr),
 
-            L => from_flag(LeftJoyConButtonMasks::L),
-            Tl => from_flag(LeftJoyConButtonMasks::Tl),
-            Zl => from_flag(LeftJoyConButtonMasks::Zl),
-            Sl => from_flag(LeftJoyConButtonMasks::Sl),
+            NsInput::L => from_flag(LeftJoyConButtonMasks::L),
+            NsInput::Tl => from_flag(LeftJoyConButtonMasks::Tl),
+            NsInput::Zl => from_flag(LeftJoyConButtonMasks::Zl),
+            NsInput::Sl => from_flag(LeftJoyConButtonMasks::Sl),
 
-            Minus => from_flag(LeftJoyConButtonMasks::Minus),
+            NsInput::Minus => from_flag(LeftJoyConButtonMasks::Minus),
 
-            Down => from_flag(LeftJoyConButtonMasks::Down),
-            Left => from_flag(LeftJoyConButtonMasks::Left),
-            Right => from_flag(LeftJoyConButtonMasks::Right),
-            Up => from_flag(LeftJoyConButtonMasks::Up),
+            NsInput::Down => from_flag(LeftJoyConButtonMasks::Down),
+            NsInput::Left => from_flag(LeftJoyConButtonMasks::Left),
+            NsInput::Right => from_flag(LeftJoyConButtonMasks::Right),
+            NsInput::Up => from_flag(LeftJoyConButtonMasks::Up),
         }
     }
 
@@ -208,22 +201,22 @@ impl Decoder {
         };
 
         hashmap! {
-            B => from_flag(RightJoyConButtonMasks::B),
-            A => from_flag(RightJoyConButtonMasks::A),
-            Y => from_flag(RightJoyConButtonMasks::Y),
-            X => from_flag(RightJoyConButtonMasks::X),
+            NsInput::B => from_flag(RightJoyConButtonMasks::B),
+            NsInput::A => from_flag(RightJoyConButtonMasks::A),
+            NsInput::Y => from_flag(RightJoyConButtonMasks::Y),
+            NsInput::X => from_flag(RightJoyConButtonMasks::X),
 
-            Home => from_flag(RightJoyConButtonMasks::Home),
-            Chat => from_flag(RightJoyConButtonMasks::Chat),
+            NsInput::Home => from_flag(RightJoyConButtonMasks::Home),
+            NsInput::Chat => from_flag(RightJoyConButtonMasks::Chat),
 
-            R => from_flag(RightJoyConButtonMasks::R),
-            Tr => from_flag(RightJoyConButtonMasks::Tr),
-            Zr => from_flag(RightJoyConButtonMasks::Zr),
-            Sr => from_flag(RightJoyConButtonMasks::Sr),
+            NsInput::R => from_flag(RightJoyConButtonMasks::R),
+            NsInput::Tr => from_flag(RightJoyConButtonMasks::Tr),
+            NsInput::Zr => from_flag(RightJoyConButtonMasks::Zr),
+            NsInput::Sr => from_flag(RightJoyConButtonMasks::Sr),
 
-            Sl => from_flag(RightJoyConButtonMasks::Sl),
+            NsInput::Sl => from_flag(RightJoyConButtonMasks::Sl),
 
-            Plus => from_flag(RightJoyConButtonMasks::Plus),
+            NsInput::Plus => from_flag(RightJoyConButtonMasks::Plus),
         }
     }
 
@@ -242,31 +235,31 @@ impl Decoder {
         };
 
         hashmap! {
-            B => from_flag(ProControllerButtonMasks::B),
-            A => from_flag(ProControllerButtonMasks::A),
-            Y => from_flag(ProControllerButtonMasks::Y),
-            X => from_flag(ProControllerButtonMasks::X),
+            NsInput::B => from_flag(ProControllerButtonMasks::B),
+            NsInput::A => from_flag(ProControllerButtonMasks::A),
+            NsInput::Y => from_flag(ProControllerButtonMasks::Y),
+            NsInput::X => from_flag(ProControllerButtonMasks::X),
 
-            Home => 0_f32,
-            Capture => 0_f32,
+            NsInput::Home => 0_f32,
+            NsInput::Capture => 0_f32,
 
-            R => from_flag(ProControllerButtonMasks::R),
-            Tr => from_flag(ProControllerButtonMasks::Tr),
-            Zr => from_flag(ProControllerButtonMasks::Zr),
-            Gr => 0_f32,
+            NsInput::R => from_flag(ProControllerButtonMasks::R),
+            NsInput::Tr => from_flag(ProControllerButtonMasks::Tr),
+            NsInput::Zr => from_flag(ProControllerButtonMasks::Zr),
+            NsInput::Gr => 0_f32,
 
-            L => from_flag(ProControllerButtonMasks::L),
-            Tl => from_flag(ProControllerButtonMasks::Tl),
-            Zl => from_flag(ProControllerButtonMasks::Zl),
-            Gl => 0_f32,
+            NsInput::L => from_flag(ProControllerButtonMasks::L),
+            NsInput::Tl => from_flag(ProControllerButtonMasks::Tl),
+            NsInput::Zl => from_flag(ProControllerButtonMasks::Zl),
+            NsInput::Gl => 0_f32,
 
-            Plus => from_flag(ProControllerButtonMasks::Plus),
-            Minus => from_flag(ProControllerButtonMasks::Minus),
+            NsInput::Plus => from_flag(ProControllerButtonMasks::Plus),
+            NsInput::Minus => from_flag(ProControllerButtonMasks::Minus),
 
-            Down => from_flag(ProControllerButtonMasks::Down),
-            Left => from_flag(ProControllerButtonMasks::Left),
-            Right => from_flag(ProControllerButtonMasks::Right),
-            Up => from_flag(ProControllerButtonMasks::Up),
+            NsInput::Down => from_flag(ProControllerButtonMasks::Down),
+            NsInput::Left => from_flag(ProControllerButtonMasks::Left),
+            NsInput::Right => from_flag(ProControllerButtonMasks::Right),
+            NsInput::Up => from_flag(ProControllerButtonMasks::Up),
         }
     }
 
@@ -285,22 +278,27 @@ impl Decoder {
         };
 
         hashmap! {
-            Down => from_flag(NsoGcControllerButtonMasks::Down),
-            Up => from_flag(NsoGcControllerButtonMasks::Up),
-            Right => from_flag(NsoGcControllerButtonMasks::Right),
-            Left => from_flag(NsoGcControllerButtonMasks::Left),
-            L => from_flag(NsoGcControllerButtonMasks::L),
-            Zl => from_flag(NsoGcControllerButtonMasks::Zl),
-            StartPause => from_flag(NsoGcControllerButtonMasks::StartPause),
-            Home => from_flag(NsoGcControllerButtonMasks::Home),
-            Capture => from_flag(NsoGcControllerButtonMasks::Capture),
-            Chat => from_flag(NsoGcControllerButtonMasks::Chat),
-            Y => from_flag(NsoGcControllerButtonMasks::Y),
-            X => from_flag(NsoGcControllerButtonMasks::X),
-            B => from_flag(NsoGcControllerButtonMasks::B),
-            A => from_flag(NsoGcControllerButtonMasks::A),
-            R => from_flag(NsoGcControllerButtonMasks::R),
-            Z => from_flag(NsoGcControllerButtonMasks::Z),
+            NsInput::B => from_flag(NsoGcControllerButtonMasks::B),
+            NsInput::A => from_flag(NsoGcControllerButtonMasks::A),
+            NsInput::Y => from_flag(NsoGcControllerButtonMasks::Y),
+            NsInput::X => from_flag(NsoGcControllerButtonMasks::X),
+
+            NsInput::Home => from_flag(NsoGcControllerButtonMasks::Home),
+            NsInput::Capture => from_flag(NsoGcControllerButtonMasks::Capture),
+            NsInput::Chat => from_flag(NsoGcControllerButtonMasks::Chat),
+
+            NsInput::R => from_flag(NsoGcControllerButtonMasks::R),
+            NsInput::Zr => from_flag(NsoGcControllerButtonMasks::Z),
+
+            NsInput::L => from_flag(NsoGcControllerButtonMasks::L),
+            NsInput::Zl => from_flag(NsoGcControllerButtonMasks::Zl),
+
+            NsInput::Plus => from_flag(NsoGcControllerButtonMasks::StartPause),
+
+            NsInput::Down => from_flag(NsoGcControllerButtonMasks::Down),
+            NsInput::Left => from_flag(NsoGcControllerButtonMasks::Left),
+            NsInput::Right => from_flag(NsoGcControllerButtonMasks::Right),
+            NsInput::Up => from_flag(NsoGcControllerButtonMasks::Up),
         }
     }
 
@@ -337,19 +335,19 @@ impl Decoder {
         let gyro_z = i16::from_le_bytes([buffer[0x3A], buffer[0x3B]]);
 
         hashmap! {
-            AccelUp => accel_y.clamp(0, i16::MAX) as f32 / 16.384,
-            AccelDown => accel_y.clamp(i16::MIN, 0) as f32 / 16.384,
-            AccelRight => accel_x.clamp(0, i16::MAX) as f32 / 16.384,
-            AccelLeft => accel_x.clamp(i16::MIN, 0) as f32 / 16.384,
-            AccelForward => accel_z.clamp(0, i16::MAX) as f32 / 16.384,
-            AccelBackward => accel_z.clamp(i16::MIN, 0) as f32 / 16.384,
+            NsInput::AccelUp => accel_y.clamp(0, i16::MAX) as f32 / 16.384,
+            NsInput::AccelDown => accel_y.clamp(i16::MIN, 0) as f32 / 16.384,
+            NsInput::AccelRight => accel_x.clamp(0, i16::MAX) as f32 / 16.384,
+            NsInput::AccelLeft => accel_x.clamp(i16::MIN, 0) as f32 / 16.384,
+            NsInput::AccelForward => accel_z.clamp(0, i16::MAX) as f32 / 16.384,
+            NsInput::AccelBackward => accel_z.clamp(i16::MIN, 0) as f32 / 16.384,
 
-            GyroPitchUp => gyro_x.clamp(0, i16::MAX) as f32 / 16.384,
-            GyroPitchDown => gyro_x.clamp(i16::MIN, 0) as f32 / 16.384,
-            GyroRollRight => gyro_y.clamp(0, i16::MAX) as f32 / 16.384,
-            GyroRollLeft => gyro_y.clamp(i16::MIN, 0) as f32 / 16.384,
-            GyroYawRight => gyro_z.clamp(0, i16::MAX) as f32 / 16.384,
-            GyroYawLeft => gyro_z.clamp(i16::MIN, 0) as f32 / 16.384,
+            NsInput::GyroPitchUp => gyro_x.clamp(0, i16::MAX) as f32 / 16.384,
+            NsInput::GyroPitchDown => gyro_x.clamp(i16::MIN, 0) as f32 / 16.384,
+            NsInput::GyroRollRight => gyro_y.clamp(0, i16::MAX) as f32 / 16.384,
+            NsInput::GyroRollLeft => gyro_y.clamp(i16::MIN, 0) as f32 / 16.384,
+            NsInput::GyroYawRight => gyro_z.clamp(0, i16::MAX) as f32 / 16.384,
+            NsInput::GyroYawLeft => gyro_z.clamp(i16::MIN, 0) as f32 / 16.384,
         }
     }
 
@@ -374,8 +372,8 @@ impl Decoder {
         let r_trigger = self.decode_calibrated_gc_trigger(buffer[0x3d]);
 
         hashmap! {
-            LTrigger => l_trigger,
-            RTrigger => r_trigger,
+            NsInput::LTrigger => l_trigger,
+            NsInput::RTrigger => r_trigger,
         }
     }
 

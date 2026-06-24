@@ -27,8 +27,6 @@ pub enum NsInputType {
     R,
     #[sea_orm(string_value = "Zr")]
     Zr,
-    #[sea_orm(string_value = "Z")]
-    Z,
     #[sea_orm(string_value = "Tr")]
     Tr,
     #[sea_orm(string_value = "Sr")]
@@ -57,8 +55,6 @@ pub enum NsInputType {
     Plus,
     #[sea_orm(string_value = "Minus")]
     Minus,
-    #[sea_orm(string_value = "StartPause")]
-    StartPause,
 
     // ----------- D pad buttons -----------
     #[sea_orm(string_value = "Down")]
@@ -171,9 +167,6 @@ impl From<NsInput> for NsInputType {
             NsInput::GyroYawLeft => NsInputType::GyroYawLeft,
             NsInput::GyroYawRight => NsInputType::GyroYawRight,
 
-            NsInput::Z => NsInputType::Z,
-            NsInput::StartPause => NsInputType::StartPause,
-
             NsInput::RTrigger => NsInputType::RTrigger,
             NsInput::LTrigger => NsInputType::LTrigger,
         }
@@ -187,47 +180,55 @@ impl From<NsInputType> for NsInput {
             NsInputType::A => NsInput::A,
             NsInputType::Y => NsInput::Y,
             NsInputType::X => NsInput::X,
+
             NsInputType::Home => NsInput::Home,
             NsInputType::Capture => NsInput::Capture,
             NsInputType::Chat => NsInput::Chat,
+
             NsInputType::R => NsInput::R,
             NsInputType::Zr => NsInput::Zr,
             NsInputType::Tr => NsInput::Tr,
             NsInputType::Sr => NsInput::Sr,
             NsInputType::Gr => NsInput::Gr,
+
             NsInputType::L => NsInput::L,
             NsInputType::Zl => NsInput::Zl,
             NsInputType::Tl => NsInput::Tl,
             NsInputType::Sl => NsInput::Sl,
             NsInputType::Gl => NsInput::Gl,
+
             NsInputType::Plus => NsInput::Plus,
             NsInputType::Minus => NsInput::Minus,
+
             NsInputType::Down => NsInput::Down,
             NsInputType::Left => NsInput::Left,
             NsInputType::Right => NsInput::Right,
             NsInputType::Up => NsInput::Up,
+
             NsInputType::LeftXMinus => NsInput::LeftXMinus,
             NsInputType::LeftXPlus => NsInput::LeftXPlus,
             NsInputType::LeftYMinus => NsInput::LeftYMinus,
             NsInputType::LeftYPlus => NsInput::LeftYPlus,
+
             NsInputType::RightXMinus => NsInput::RightXMinus,
             NsInputType::RightXPlus => NsInput::RightXPlus,
             NsInputType::RightYMinus => NsInput::RightYMinus,
             NsInputType::RightYPlus => NsInput::RightYPlus,
+
             NsInputType::AccelUp => NsInput::AccelUp,
             NsInputType::AccelDown => NsInput::AccelDown,
             NsInputType::AccelLeft => NsInput::AccelLeft,
             NsInputType::AccelRight => NsInput::AccelRight,
             NsInputType::AccelForward => NsInput::AccelForward,
             NsInputType::AccelBackward => NsInput::AccelBackward,
+
             NsInputType::GyroPitchUp => NsInput::GyroPitchUp,
             NsInputType::GyroPitchDown => NsInput::GyroPitchDown,
             NsInputType::GyroRollLeft => NsInput::GyroRollLeft,
             NsInputType::GyroRollRight => NsInput::GyroRollRight,
             NsInputType::GyroYawLeft => NsInput::GyroYawLeft,
             NsInputType::GyroYawRight => NsInput::GyroYawRight,
-            NsInputType::Z => NsInput::Z,
-            NsInputType::StartPause => NsInput::StartPause,
+
             NsInputType::RTrigger => NsInput::RTrigger,
             NsInputType::LTrigger => NsInput::LTrigger,
         }

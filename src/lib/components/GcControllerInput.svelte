@@ -24,14 +24,16 @@
         <rect fill={isActive('Zl') ? 'var(--accent-color)' : '#444'} height="8" rx="2" width="25" x="35" y="52"/>
         <!-- L Trigger (Analog + Digital click) -->
         <rect fill="#111" height="20" rx="3" width="30" x="35" y="25"/>
-        <rect fill="var(--accent-color)" opacity={isActive('L') ? 1 : 0.5} height={18 * lPressure} rx="2" width="28" x="36" y={26 + 18 * (1 - lPressure)}/>
+        <rect fill="var(--accent-color)" height={18 * lPressure} opacity={isActive('L') ? 1 : 0.5} rx="2" width="28"
+              x="36" y={26 + 18 * (1 - lPressure)}/>
         <rect fill="none" height="20" rx="3" stroke="rgba(255,255,255,0.1)" stroke-width="1" width="30" x="35" y="25"/>
 
         <!-- Z Bumper (Right) -->
-        <rect fill={isActive('Z') ? 'var(--accent-color)' : '#444'} height="8" rx="2" width="25" x="140" y="52"/>
+        <rect fill={isActive('Zr') ? 'var(--accent-color)' : '#444'} height="8" rx="2" width="25" x="140" y="52"/>
         <!-- R Trigger (Analog + Digital click) -->
         <rect fill="#111" height="20" rx="3" width="30" x="135" y="25"/>
-        <rect fill="var(--accent-color)" opacity={isActive('R') ? 1 : 0.5} height={18 * rPressure} rx="2" width="28" x="136"
+        <rect fill="var(--accent-color)" height={18 * rPressure} opacity={isActive('R') ? 1 : 0.5} rx="2" width="28"
+              x="136"
               y={26 + 18 * (1 - rPressure)}/>
         <rect fill="none" height="20" rx="3" stroke="rgba(255,255,255,0.1)" stroke-width="1" width="30" x="135" y="25"/>
 
@@ -88,7 +90,7 @@
               fill={isActive('X') ? '#9E9E9E' : '#444'}/>
 
         <!-- Start Button -->
-        <circle cx="100" cy="55" fill={isActive('StartPause') ? 'var(--accent-color)' : '#444'} r="5"/>
+        <circle cx="100" cy="55" fill={isActive('Plus') ? 'var(--accent-color)' : '#444'} r="5"/>
     </svg>
 </div>
 
