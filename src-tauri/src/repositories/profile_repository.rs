@@ -1,12 +1,12 @@
 use crate::data::output::Output;
-use crate::entities::{condition, profile, value_condition};
-use crate::profiles::input::Input;
+use crate::entities::{condition, profile};
+use crate::profiles::input::input::Input;
 use crate::profiles::profile::Profile;
+use crate::repositories::repository_error::RepositoryError;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, DatabaseTransaction, DbErr, EntityTrait,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DatabaseTransaction, EntityTrait,
     ModelTrait, QueryFilter, Set, TransactionTrait,
 };
-use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Clone, Debug, Default)]
@@ -23,29 +23,21 @@ impl ProfileRepository {
         &self,
         txn: &DatabaseTransaction,
         output: Output,
+        input: Input,
         profile_id: Uuid,
-        condition: &Input,
-    ) -> Result<(), DbErr> {
+    ) -> Result<(), RepositoryError> {
         let id = Uuid::now_v7();
+
+        let serialized_input = postcard::to_allocvec(&input)?;
 
         condition::ActiveModel {
             id: Set(id),
+            input: Set(serialized_input),
             output: Set(output.into()),
             profile_id: Set(profile_id),
         }
         .insert(txn)
         .await?;
-
-        match condition {
-            Input::Value(input) => {
-                value_condition::ActiveModel {
-                    condition_id: Set(id),
-                    input: Set(input.clone().into()),
-                }
-                .insert(txn)
-                .await?;
-            }
-        }
 
         Ok(())
     }
@@ -54,7 +46,7 @@ impl ProfileRepository {
         &self,
         txn: &DatabaseTransaction,
         name: &str,
-    ) -> Result<(), DbErr> {
+    ) -> Result<(), RepositoryError> {
         let profile = profile::Entity::find()
             .filter(profile::Column::Name.eq(name))
             .one(txn)
@@ -67,7 +59,7 @@ impl ProfileRepository {
         Ok(())
     }
 
-    pub async fn save_profile(&self, profile: Profile) -> Result<(), DbErr> {
+    pub async fn save_profile(&self, profile: Profile) -> Result<(), RepositoryError> {
         let txn = self.db.begin().await?;
 
         self.inner_delete_profile(&txn, &profile.name).await?;
@@ -82,21 +74,23 @@ impl ProfileRepository {
         .insert(&txn)
         .await?;
 
-        for (output, condition) in profile.outputs.iter() {
-            self.save_condition(&txn, output.clone(), id, condition)
-                .await?;
+        for (output, input) in profile.outputs.into_iter() {
+            self.save_condition(&txn, output, input, id).await?;
         }
 
-        txn.commit().await
+        txn.commit().await.map_err(Into::into)
     }
 
-    pub async fn delete_profile(&self, name: &str) -> Result<(), DbErr> {
+    pub async fn delete_profile(&self, name: &str) -> Result<(), RepositoryError> {
         let txn = self.db.begin().await?;
         self.inner_delete_profile(&txn, name).await?;
-        txn.commit().await
+        txn.commit().await.map_err(Into::into)
     }
 
-    pub async fn find_profile_by_name(&self, name: &str) -> Result<Option<Profile>, DbErr> {
+    pub async fn find_profile_by_name(
+        &self,
+        name: &str,
+    ) -> Result<Option<Profile>, RepositoryError> {
         let txn = self.db.begin().await?;
 
         let profile = profile::Entity::find()
@@ -109,7 +103,6 @@ impl ProfileRepository {
             Some(profile) => {
                 let conditions = condition::Entity::find()
                     .filter(condition::Column::ProfileId.eq(profile.id))
-                    .find_also_related(value_condition::Entity)
                     .all(&txn)
                     .await?;
 
@@ -117,13 +110,13 @@ impl ProfileRepository {
 
                 let outputs = conditions
                     .into_iter()
-                    .map(|(condition, value_condition)| {
-                        (
-                            condition.output.into(),
-                            Input::Value(value_condition.unwrap().input.into()),
-                        )
+                    .map(|condition| {
+                        let output = condition.output.into();
+                        let input = postcard::from_bytes(&condition.input)?;
+
+                        Ok((output, input))
                     })
-                    .collect::<HashMap<Output, Input>>();
+                    .collect::<Result<_, postcard::Error>>()?;
 
                 Ok(Some(Profile::new(
                     profile.name,
@@ -134,10 +127,11 @@ impl ProfileRepository {
         }
     }
 
-    pub async fn profile_names(&self) -> Result<Vec<String>, DbErr> {
+    pub async fn profile_names(&self) -> Result<Vec<String>, RepositoryError> {
         profile::Entity::find()
             .all(&self.db)
             .await
             .map(|profiles| profiles.into_iter().map(|profile| profile.name).collect())
+            .map_err(Into::into)
     }
 }
