@@ -5,8 +5,11 @@ use crate::state::app_state::AppState;
 use crate::state::ns_controller::NsController;
 use btleplug::api::Peripheral;
 use futures::StreamExt;
+use std::sync::Arc;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, State};
+use tokio::sync::watch;
+use tokio::time;
 use tokio::time::sleep;
 use uuid::Uuid;
 
@@ -62,26 +65,39 @@ pub async fn connect_controller(
         .await
         .map_err(|err| err.to_string())?;
 
-    // Start input detection
-    let input_informer_device = device.clone();
-    let input_informer = tauri::async_runtime::spawn(async move {
-        // Suscribe to input notifications
-        let mut notifications = input_informer_device
-            .peripheral
-            .notifications()
-            .await
-            .unwrap();
+    let (sender, receiver) = watch::channel(Arc::new(vec![]));
 
-        let decoder = Decoder;
+    let mut notifications = device
+        .peripheral
+        .notifications()
+        .await
+        .map_err(|err| err.to_string())?;
 
-        // Poll notifications from input characteristic until stream fail
+    let input_uuid = device.input_char.uuid;
+
+    let input_pooler = tauri::async_runtime::spawn(async move {
         while let Some(notification) = notifications.next().await {
-            if notification.uuid != input_informer_device.input_char.uuid {
-                return;
+            if notification.uuid != input_uuid {
+                continue;
             }
 
-            // Decode input buffer
-            let buffer = notification.value;
+            let _ = sender.send(Arc::new(notification.value));
+        }
+    });
+
+    let mut interval = time::interval(Duration::from_secs_f64(1_f64 / 60_f64));
+    let input_informer = tauri::async_runtime::spawn(async move {
+        let decoder = Decoder;
+
+        loop {
+            interval.tick().await;
+
+            let buffer = receiver.borrow().clone();
+
+            if buffer.is_empty() {
+                continue;
+            }
+
             let input = match kind {
                 NsControllerKind::LeftJoyCon => decoder.decode_left_joycon(&buffer),
                 NsControllerKind::RightJoyCon => decoder.decode_right_joycon(&buffer),
@@ -89,12 +105,11 @@ pub async fn connect_controller(
                 NsControllerKind::NsoGcController => decoder.decode_gc_controller(&buffer),
             };
 
-            // Report
             let _ = app.emit("update-input", (id, input));
         }
     });
 
-    let controller = NsController::new(kind, device, input_informer);
+    let controller = NsController::new(kind, device, input_pooler, input_informer);
 
     state.insert_ns_controller(id, controller).await;
 
