@@ -1,6 +1,6 @@
 use crate::data::output::Output;
 use crate::data::profile_kind::ProfileKind;
-use crate::profiles::input::Input;
+use crate::profiles::input::input::Input;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
