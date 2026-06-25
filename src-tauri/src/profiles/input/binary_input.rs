@@ -3,7 +3,7 @@ use crate::profiles::input::binary_operator::BinaryOperator;
 use crate::profiles::input::input::Input;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct BinaryInput {
     left: Input,
     right: Input,
