@@ -9,6 +9,7 @@ use tauri::async_runtime::JoinHandle;
 pub struct NsController {
     kind: NsControllerKind,
     device: ConnectedDevice,
+    input_poller: JoinHandle<()>,
     input_informer: JoinHandle<()>,
 }
 
@@ -16,11 +17,13 @@ impl NsController {
     pub fn new(
         kind: NsControllerKind,
         device: ConnectedDevice,
+        input_poller: JoinHandle<()>,
         input_informer: JoinHandle<()>,
     ) -> Self {
         Self {
             kind,
             device,
+            input_poller,
             input_informer,
         }
     }
@@ -39,6 +42,7 @@ impl NsController {
 
     pub async fn disconnect(&self) -> btleplug::Result<()> {
         self.input_informer.abort();
+        self.input_poller.abort();
         self.device.disconnect().await
     }
 }
