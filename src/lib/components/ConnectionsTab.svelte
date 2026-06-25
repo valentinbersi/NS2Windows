@@ -191,7 +191,7 @@
                         {:else if waitingFor}
                             <p class="waiting-prompt">
                                 Waiting for <strong>{CONTROLLER_KIND_LABELS[waitingFor]}</strong>.<br/>
-                                Please press any button on the device to pair it.
+                                Please hold the sync button on the device you want to pair.
                             </p>
                             <div class="waiting-icon">
                                 <svelte:component this={getIconForKind(waitingFor)} width="64" height="64"/>
