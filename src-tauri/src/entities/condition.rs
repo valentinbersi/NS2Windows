@@ -3,7 +3,7 @@ use sea_orm::prelude::*;
 use sea_orm_migration::prelude::*;
 use uuid::Uuid;
 
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, DeriveEntityModel)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, DeriveEntityModel)]
 #[sea_orm(table_name = "conditions")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
