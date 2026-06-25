@@ -1,6 +1,6 @@
 use crate::data::output::Output;
 use crate::entities::{condition, profile, value_condition};
-use crate::profiles::condition::Condition;
+use crate::profiles::input::Input;
 use crate::profiles::profile::Profile;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, DatabaseTransaction, DbErr, EntityTrait,
@@ -24,7 +24,7 @@ impl ProfileRepository {
         txn: &DatabaseTransaction,
         output: Output,
         profile_id: Uuid,
-        condition: &Condition,
+        condition: &Input,
     ) -> Result<(), DbErr> {
         let id = Uuid::now_v7();
 
@@ -37,7 +37,7 @@ impl ProfileRepository {
         .await?;
 
         match condition {
-            Condition::Value(input) => {
+            Input::Value(input) => {
                 value_condition::ActiveModel {
                     condition_id: Set(id),
                     input: Set(input.clone().into()),
@@ -120,10 +120,10 @@ impl ProfileRepository {
                     .map(|(condition, value_condition)| {
                         (
                             condition.output.into(),
-                            Condition::Value(value_condition.unwrap().input.into()),
+                            Input::Value(value_condition.unwrap().input.into()),
                         )
                     })
-                    .collect::<HashMap<Output, Condition>>();
+                    .collect::<HashMap<Output, Input>>();
 
                 Ok(Some(Profile::new(
                     profile.name,

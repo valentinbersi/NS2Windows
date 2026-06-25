@@ -3,14 +3,14 @@ use crate::data::ns_input::NsInput;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
-pub enum Condition {
+pub enum Input {
     Value(NsInput),
 }
 
-impl Condition {
+impl Input {
     pub fn evaluate(&self, data: &InputData) -> f32 {
         match self {
-            Condition::Value(input) => data.get(*input).unwrap_or(0_f32),
+            Input::Value(input) => data.get(*input).unwrap_or(0_f32),
         }
     }
 }

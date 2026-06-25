@@ -1,6 +1,6 @@
 use crate::data::output::Output;
 use crate::data::profile_kind::ProfileKind;
-use crate::profiles::condition::Condition;
+use crate::profiles::input::Input;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -8,11 +8,11 @@ use std::collections::HashMap;
 pub struct Profile {
     pub name: String,
     pub kind: ProfileKind,
-    pub outputs: HashMap<Output, Condition>,
+    pub outputs: HashMap<Output, Input>,
 }
 
 impl Profile {
-    pub fn new(name: String, kind: ProfileKind, outputs: HashMap<Output, Condition>) -> Self {
+    pub fn new(name: String, kind: ProfileKind, outputs: HashMap<Output, Input>) -> Self {
         Self {
             name,
             kind,
