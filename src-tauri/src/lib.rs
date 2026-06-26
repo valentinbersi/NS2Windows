@@ -13,7 +13,10 @@ use sea_orm::Database;
 use std::error::Error;
 use std::fs;
 use std::fs::File;
+use std::sync::atomic::AtomicU16;
+use std::sync::Arc;
 use tauri::{App, AppHandle, Manager as TManager, RunEvent};
+use tauri_plugin_store::StoreExt;
 use vigem_rust::Client;
 
 pub mod commands;
@@ -57,11 +60,40 @@ fn setup(app: &mut App) -> Result<(), Box<dyn Error>> {
 
     let vigem_client = Client::connect()?;
 
+    let settings_path = app_data_dir.join("settings.json");
+    let store = app.store(settings_path)?;
+
+    let display_frequency = store
+        .get("display_frequency")
+        .and_then(|value| value.as_u64())
+        .take_if(|value| *value <= u16::MAX as u64)
+        .map(|value| value as u16)
+        .map(AtomicU16::new)
+        .map(Arc::new)
+        .unwrap_or_else(|| {
+            store.set("display_frequency", 60);
+            Arc::new(AtomicU16::new(60))
+        });
+
+    let emulation_frequency = store
+        .get("emulation_frequency")
+        .and_then(|value| value.as_u64())
+        .take_if(|value| *value <= u16::MAX as u64)
+        .map(|value| value as u16)
+        .map(AtomicU16::new)
+        .map(Arc::new)
+        .unwrap_or_else(|| {
+            store.set("emulation_frequency", 60);
+            Arc::new(AtomicU16::new(60))
+        });
+
     app.manage(AppState::new(
         ProfileRepository::new(db),
         BluetoothConnector::new(adapter),
         BluetoothCommunicator,
         vigem_client,
+        display_frequency,
+        emulation_frequency,
     ));
 
     Ok(())
@@ -89,6 +121,7 @@ fn event_loop(app_handle: &AppHandle, event: RunEvent) {
 pub fn run() -> tauri::Result<()> {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_store::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             connect_controller,
             disconnect_controller,
