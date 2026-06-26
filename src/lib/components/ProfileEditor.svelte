@@ -1,8 +1,9 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import { invoke } from "@tauri-apps/api/core";
-    import { ProfileKind, NS_INPUT_LABELS, PS4_OUTPUT_LABELS, XBOX360_OUTPUT_LABELS } from "../types";
-    import type { Profile, NsInput, Output, Condition } from "../types";
+    import {onMount} from "svelte";
+    import {invoke} from "@tauri-apps/api/core";
+    import type {Input, Output, Profile} from "../types";
+    import {ProfileKind, PS4_OUTPUT_LABELS, XBOX360_OUTPUT_LABELS} from "../types";
+    import ExpressionInput from "./ExpressionInput.svelte";
 
     export let profileName: string | null = null;
     export let onBack: () => void;
@@ -14,29 +15,34 @@
     };
 
     let loading = true;
+    let validityMap: Record<string, boolean> = {};
+
+    $: canSave = profile.name.trim().length > 0 && Object.values(validityMap).every(v => v);
 
     // Derived list of outputs based on kind
     $: activeOutputs = Object.entries(
         profile.kind === ProfileKind.Ps4 ? PS4_OUTPUT_LABELS : XBOX360_OUTPUT_LABELS
     )
         .filter(([_, label]) => label !== null)
-        .map(([key, label]) => ({ key: key as Output, label: label as string }));
+        .map(([key, label]) => ({key: key as Output, label: label as string}));
 
-    const allNsInputs = Object.entries(NS_INPUT_LABELS).map(([key, label]) => ({
-        key: key as NsInput,
-        label,
-    }));
+    // Initialize validity tracking
+    $: {
+        for (const output of activeOutputs) {
+            if (validityMap[output.key] === undefined) {
+                validityMap[output.key] = true;
+            }
+        }
+    }
 
     onMount(async () => {
         if (profileName) {
             try {
-                const existing = await invoke<Profile | null>("find_profile_by_name", { name: profileName });
+                const existing = await invoke<Profile | null>("find_profile_by_name", {name: profileName});
                 if (existing) {
-                    // Rust serializes enums without wrapping if configured, but let's assume it matches our interface.
                     profile = {
                         name: existing.name,
                         kind: existing.kind,
-                        // Ensure outputs is at least an empty object
                         outputs: existing.outputs || {}
                     };
                 }
@@ -48,30 +54,25 @@
     });
 
     async function handleSave() {
-        if (!profile.name.trim()) {
-            alert("Profile name cannot be empty");
+        if (!canSave) {
             return;
         }
-        
+
         try {
-            await invoke("save_profile", { profile });
+            // Clean up outputs: remove nulls if they somehow got in
+            const finalOutputs: Partial<Record<Output, Input>> = {};
+            for (const [k, v] of Object.entries(profile.outputs)) {
+                if (v !== null && v !== undefined) {
+                    finalOutputs[k as Output] = v;
+                }
+            }
+            profile.outputs = finalOutputs;
+
+            await invoke("save_profile", {profile});
             onBack();
         } catch (e) {
             console.error("Failed to save profile", e);
             alert("Failed to save profile");
-        }
-    }
-
-    function handleOutputChange(output: Output, value: string) {
-        if (value === "None") {
-            const newOutputs = { ...profile.outputs };
-            delete newOutputs[output];
-            profile.outputs = newOutputs;
-        } else {
-            profile.outputs = {
-                ...profile.outputs,
-                [output]: { Value: value as NsInput }
-            };
         }
     }
 </script>
@@ -87,19 +88,24 @@
             </div>
             <div class="header-actions">
                 <button on:click={onBack}>Cancel</button>
-                <button class="primary" on:click={handleSave}>Save Profile</button>
+                <div class="save-wrapper">
+                    {#if !canSave && profile.name.trim().length > 0}
+                        <span class="error-msg">Invalid inputs detected</span>
+                    {/if}
+                    <button class="primary" disabled={!canSave} on:click={handleSave}>Save Profile</button>
+                </div>
             </div>
         </div>
 
         <div class="form-section">
             <div class="input-group">
                 <label for="profileName">Profile Name</label>
-                <input 
-                    id="profileName" 
-                    type="text" 
-                    bind:value={profile.name} 
-                    placeholder="e.g. Smash Bros layout"
-                    disabled={profileName !== null} 
+                <input
+                        id="profileName"
+                        type="text"
+                        bind:value={profile.name}
+                        placeholder="e.g. Smash Bros layout"
+                        disabled={profileName !== null}
                 />
                 {#if profileName !== null}
                     <small class="hint">Profile name cannot be changed after creation.</small>
@@ -122,28 +128,24 @@
             <div class="table-container">
                 <table>
                     <thead>
-                        <tr>
-                            <th>Virtual Output ({profile.kind})</th>
-                            <th>Nintendo Switch Input</th>
-                        </tr>
+                    <tr>
+                        <th>Virtual Output ({profile.kind})</th>
+                        <th>Nintendo Switch Expression</th>
+                    </tr>
                     </thead>
                     <tbody>
-                        {#each activeOutputs as { key, label }}
-                            <tr>
-                                <td class="output-cell">{label}</td>
-                                <td>
-                                    <select 
-                                        value={profile.outputs[key]?.Value || "None"}
-                                        on:change={(e) => handleOutputChange(key, e.currentTarget.value)}
-                                    >
-                                        <option value="None">-- Unmapped --</option>
-                                        {#each allNsInputs as input}
-                                            <option value={input.key}>{input.label}</option>
-                                        {/each}
-                                    </select>
-                                </td>
-                            </tr>
-                        {/each}
+                    {#each activeOutputs as {key, label}}
+                        <tr>
+                            <td class="output-cell">{label}</td>
+                            <td>
+                                <ExpressionInput
+                                        id={`input-${key}`}
+                                        bind:value={profile.outputs[key]}
+                                        bind:isValid={validityMap[key]}
+                                />
+                            </td>
+                        </tr>
+                    {/each}
                     </tbody>
                 </table>
             </div>
@@ -201,6 +203,19 @@
     .header-actions {
         display: flex;
         gap: 12px;
+        align-items: center;
+    }
+
+    .save-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .error-msg {
+        color: #e06c75;
+        font-size: 14px;
+        font-weight: 500;
     }
 
     .form-section {
