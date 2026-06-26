@@ -61,8 +61,7 @@ fn setup(app: &mut App) -> Result<(), Box<dyn Error>> {
 
     let vigem_client = Client::connect()?;
 
-    let settings_path = app_data_dir.join("settings.json");
-    let store = app.store(settings_path)?;
+    let store = app.store("settings.json")?;
 
     let display_frequency = store
         .get("display_frequency")
