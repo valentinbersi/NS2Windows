@@ -5,6 +5,7 @@ use crate::state::app_state::AppState;
 use crate::state::ns_controller::NsController;
 use btleplug::api::Peripheral;
 use futures::StreamExt;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, State};
@@ -85,12 +86,16 @@ pub async fn connect_controller(
         }
     });
 
-    let mut interval = time::interval(Duration::from_secs_f64(1_f64 / 60_f64));
+    let display_frequency = state.display_frequency.clone();
     let input_informer = tauri::async_runtime::spawn(async move {
         let decoder = Decoder;
 
         loop {
-            interval.tick().await;
+            let display_frequency = display_frequency.load(Ordering::Relaxed) as f64;
+
+            time::interval(Duration::from_secs_f64(1_f64 / display_frequency))
+                .tick()
+                .await;
 
             let buffer = receiver.borrow().clone();
 
