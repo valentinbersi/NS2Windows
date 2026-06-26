@@ -10,7 +10,7 @@ export function parseExpression(text: string): Input | null {
     if (!text.trim()) return null;
 
     // Tokenize
-    const regex = /\(|\)|and|or|\w+/gi;
+    const regex = /\(|\)|\band\b|\bor\b|\w+/gi;
     const tokens = text.match(regex) || [];
 
     let current = 0;
