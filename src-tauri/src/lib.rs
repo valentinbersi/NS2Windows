@@ -3,6 +3,7 @@ use crate::commands::controllers::{start_controller, stop_controller};
 use crate::commands::profiles::{
     delete_profile, find_profile_by_name, profile_names, save_profile,
 };
+use crate::commands::settings::{update_display_frequency, update_emulation_frequency};
 use crate::communication::communicator::BluetoothCommunicator;
 use crate::connection::connector::BluetoothConnector;
 use crate::repositories::profile_repository::ProfileRepository;
@@ -131,6 +132,8 @@ pub fn run() -> tauri::Result<()> {
             delete_profile,
             find_profile_by_name,
             profile_names,
+            update_display_frequency,
+            update_emulation_frequency,
         ])
         .setup(setup)
         .build(tauri::generate_context!())?
