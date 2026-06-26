@@ -10,15 +10,17 @@ use crate::evaluation::evaluator::Evaluator;
 use crate::profiles::profile::Profile;
 use crate::state::app_state::AppState;
 use crate::state::emulated_controller_task::EmulatedControllerTask;
-use btleplug::api::{Characteristic, Peripheral as PeripheralApi};
-use btleplug::platform::Peripheral;
+use crate::state::ns_controller::NsController;
+use btleplug::api::Peripheral as PeripheralApi;
 use futures::StreamExt;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::async_runtime::JoinHandle;
 use tauri::State;
-use tokio::sync::Mutex;
-use tokio::time::sleep;
+use tokio::sync::watch;
+use tokio::sync::watch::Sender;
+use tokio::time;
 use uuid::Uuid;
 use vigem_rust::client::ClientError;
 use vigem_rust::target::{DualShock4, Xbox360};
@@ -66,21 +68,45 @@ async fn start_single_controller(
         .await
         .ok_or_else(|| format!("Could not find controller with id {}", single_controller.id))?;
 
-    let peripheral = controller.peripheral();
-    let input = controller.input();
+    let (sender, receiver) = watch::channel(Arc::new(vec![0_u8; 0]));
 
-    let task = tauri::async_runtime::spawn(async move {
-        let decoder = Decoder;
-        let evaluator = Evaluator;
+    let mut notifications = controller
+        .notifications()
+        .await
+        .map_err(|err| err.to_string())?;
 
-        let mut stream = peripheral.notifications().await.unwrap();
-        while let Some(notification) = stream.next().await {
-            if notification.uuid != input.uuid {
+    let input_uuid = controller.input_uuid();
+
+    let input_pooler = tauri::async_runtime::spawn(async move {
+        while let Some(notification) = notifications.next().await {
+            if notification.uuid != input_uuid {
                 continue;
             }
 
-            let buffer = notification.value;
-            let input = match controller.kind() {
+            let buffer = Arc::new(notification.value);
+            let _ = sender.send(buffer);
+        }
+    });
+
+    let emulation_frequency = state.emulation_frequency.clone();
+    let decoder = Decoder;
+    let evaluator = Evaluator;
+    let controller_kind = controller.kind();
+    let output_emulator = tauri::async_runtime::spawn(async move {
+        loop {
+            let emulation_frequency = emulation_frequency.load(Ordering::Relaxed) as f64;
+
+            time::interval(Duration::from_secs_f64(1_f64 / emulation_frequency))
+                .tick()
+                .await;
+
+            let buffer = receiver.borrow().clone();
+
+            if buffer.is_empty() {
+                continue;
+            }
+
+            let input = match controller_kind {
                 NsControllerKind::LeftJoyCon => decoder.decode_left_joycon(&buffer),
                 NsControllerKind::RightJoyCon => decoder.decode_right_joycon(&buffer),
                 NsControllerKind::ProController => decoder.decode_pro_controller(&buffer),
@@ -92,7 +118,7 @@ async fn start_single_controller(
         }
     });
 
-    let task = EmulatedControllerTask::new_single_controller(task);
+    let task = EmulatedControllerTask::new_single_controller(input_pooler, output_emulator);
 
     let id = Uuid::now_v7();
 
@@ -101,22 +127,26 @@ async fn start_single_controller(
     Ok(id)
 }
 
-fn spawn_input_task(
-    peripheral: Peripheral,
-    input: Arc<Characteristic>,
-    output: Arc<Mutex<Arc<Vec<u8>>>>,
-) -> JoinHandle<()> {
-    tauri::async_runtime::spawn(async move {
-        let mut notifications = peripheral.notifications().await.unwrap();
+async fn spawn_input_task(
+    controller: Arc<NsController>,
+    sender: Sender<Arc<Vec<u8>>>,
+) -> Result<JoinHandle<()>, String> {
+    let input_uuid = controller.input_uuid();
+    let mut notifications = controller
+        .notifications()
+        .await
+        .map_err(|err| err.to_string())?;
+
+    Ok(tauri::async_runtime::spawn(async move {
         while let Some(notification) = notifications.next().await {
-            if notification.uuid != input.uuid {
+            if notification.uuid != input_uuid {
                 continue;
             }
 
             let buffer = Arc::new(notification.value);
-            *output.lock().await = buffer;
+            let _ = sender.send(buffer);
         }
-    })
+    }))
 }
 
 async fn start_dual_joy_con(
@@ -130,22 +160,27 @@ async fn start_dual_joy_con(
         .await
         .map_err(|id| format!("Could not found a controller with id {id}"))?;
 
-    let left_buffer = Arc::new(Mutex::new(Arc::new(vec![])));
-    let right_buffer = Arc::new(Mutex::new(Arc::new(vec![])));
+    let (left_sender, left_receiver) = watch::channel(Arc::new(vec![0_u8; 0]));
+    let (right_sender, right_receiver) = watch::channel(Arc::new(vec![0_u8; 0]));
 
-    let left_task = spawn_input_task(left.peripheral(), left.input(), left_buffer.clone());
-    let right_task = spawn_input_task(right.peripheral(), right.input(), right_buffer.clone());
+    let left_task = spawn_input_task(left, left_sender).await?;
+    let right_task = spawn_input_task(right, right_sender).await?;
 
+    let decoder = Decoder;
+    let evaluator = Evaluator;
+    let emulation_frequency = state.emulation_frequency.clone();
     let output_task = tauri::async_runtime::spawn(async move {
-        let decoder = Decoder;
-        let evaluator = Evaluator;
-
         loop {
-            let left_buffer = left_buffer.lock().await.clone();
-            let right_buffer = right_buffer.lock().await.clone();
+            let emulation_frequency = emulation_frequency.load(Ordering::Relaxed) as f64;
+
+            time::interval(Duration::from_secs_f64(1_f64 / emulation_frequency))
+                .tick()
+                .await;
+
+            let left_buffer = left_receiver.borrow().clone();
+            let right_buffer = right_receiver.borrow().clone();
 
             if left_buffer.is_empty() || right_buffer.is_empty() {
-                sleep(Duration::from_millis(5)).await;
                 continue;
             }
 
