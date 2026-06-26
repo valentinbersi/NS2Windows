@@ -4,8 +4,9 @@
     import ConnectionsTab from '$lib/components/ConnectionsTab.svelte';
     import ControllersTab from '$lib/components/ControllersTab.svelte';
     import ProfileEditor from '$lib/components/ProfileEditor.svelte';
+    import SettingsTab from '$lib/components/SettingsTab.svelte';
 
-    const TABS = ["Controllers", "Profiles", "Connections"];
+    const TABS = ["Controllers", "Profiles", "Connections", "Settings"];
     let activeTab = "Profiles";
 
     // State for Profiles tab
@@ -49,6 +50,8 @@
             {/if}
         {:else if activeTab === "Connections"}
             <ConnectionsTab />
+        {:else if activeTab === "Settings"}
+            <SettingsTab />
         {/if}
     </div>
 </main>
