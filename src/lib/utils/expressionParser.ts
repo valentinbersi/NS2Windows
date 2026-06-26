@@ -89,7 +89,8 @@ export function parseExpression(text: string): Input | null {
     }
 }
 
-export function stringifyCondition(cond: Input): string {
+export function stringifyCondition(cond: Input | null | undefined): string {
+    if (!cond) return "";
     if ("Value" in cond) {
         return cond.Value.input;
     }
