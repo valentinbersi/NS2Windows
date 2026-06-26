@@ -4,6 +4,7 @@ use crate::repositories::profile_repository::ProfileRepository;
 use crate::state::emulated_controller_task::EmulatedControllerTask;
 use crate::state::ns_controller::NsController;
 use std::collections::HashMap;
+use std::sync::atomic::AtomicU16;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
@@ -17,6 +18,9 @@ pub struct AppState {
 
     pub vigem_client: Client,
 
+    pub display_frequency: Arc<AtomicU16>, // The frequency of the input display (in Hz)
+    pub emulation_frequency: Arc<AtomicU16>, // The frequency of the emulation (in Hz)
+
     connected_controllers: RwLock<HashMap<Uuid, Arc<NsController>>>,
     emulated_controllers: RwLock<HashMap<Uuid, EmulatedControllerTask>>,
 }
@@ -27,12 +31,16 @@ impl AppState {
         connector: BluetoothConnector,
         communicator: BluetoothCommunicator,
         vigem: Client,
+        display_frequency: Arc<AtomicU16>,
+        emulation_frequency: Arc<AtomicU16>,
     ) -> Self {
         Self {
             profile_repository,
             connector,
             communicator,
             vigem_client: vigem,
+            display_frequency,
+            emulation_frequency,
             connected_controllers: Default::default(),
             emulated_controllers: Default::default(),
         }
