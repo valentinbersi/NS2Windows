@@ -11,6 +11,7 @@ pub fn update_display_frequency(
 ) -> Result<(), String> {
     let store = app.store("settings.json").map_err(|err| err.to_string())?;
     store.set("display_frequency", new_frequency);
+    store.save().map_err(|err| err.to_string())?;
 
     state
         .display_frequency
@@ -27,6 +28,7 @@ pub async fn update_emulation_frequency(
 ) -> Result<(), String> {
     let store = app.store("settings.json").map_err(|err| err.to_string())?;
     store.set("emulation_frequency", new_frequency);
+    store.save().map_err(|err| err.to_string())?;
 
     state
         .emulation_frequency
