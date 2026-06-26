@@ -2,16 +2,56 @@
     import type { Input } from '../types';
     import { NS_INPUT_LABELS } from '../types';
     import { parseExpression, stringifyCondition } from '../utils/expressionParser';
-    import { onMount } from 'svelte';
+    import { onMount, tick } from 'svelte';
 
     export let value: Input | null = null;
     export let isValid: boolean = true;
     export let id: string = "";
+    export let readonly: boolean = false;
 
-    let text = "";
+    let text = value === null ? "" : stringifyCondition(value);
     let prevValue = value;
     let scrollLeft = 0;
     let inputEl: HTMLInputElement;
+    let lastCursorPos: number = 0;
+
+    // Track cursor position on every interaction so we have it even after focus loss
+    function saveCursorPos() {
+        if (inputEl && document.activeElement === inputEl) {
+            lastCursorPos = inputEl.selectionEnd ?? text.length;
+        }
+    }
+
+    export async function insertText(insertStr: string) {
+        if (readonly) return;
+        const pos = lastCursorPos;
+        text = text.substring(0, pos) + insertStr + text.substring(pos);
+        const newPos = pos + insertStr.length;
+        lastCursorPos = newPos;
+
+        // Trigger validation
+        updateFromText(text);
+
+        // Wait for Svelte to flush the DOM, then restore cursor & scroll
+        await tick();
+        if (inputEl) {
+            inputEl.focus();
+            inputEl.selectionStart = inputEl.selectionEnd = newPos;
+            // Force the browser to scroll the input so the cursor is visible
+            // by briefly making text color visible (no-op trick) then reading scrollLeft
+            requestAnimationFrame(() => {
+                if (inputEl) {
+                    scrollLeft = inputEl.scrollLeft;
+                }
+            });
+        }
+    }
+
+    export function clear() {
+        if (readonly) return;
+        text = "";
+        updateFromText(text);
+    }
 
     const VALID_INPUTS = new Set(Object.keys(NS_INPUT_LABELS));
 
@@ -27,15 +67,19 @@
 
     function handleInput(e: Event) {
         handleScroll(e);
+        saveCursorPos();
+        updateFromText(text);
+    }
 
-        if (text.trim() === "") {
+    function updateFromText(newText: string) {
+        if (newText.trim() === "") {
             isValid = true;
             if (value !== null) {
                 value = null;
                 prevValue = value;
             }
         } else {
-            const parsed = parseExpression(text);
+            const parsed = parseExpression(newText);
             if (parsed === null) {
                 isValid = false;
                 if (value !== null) {
@@ -54,14 +98,14 @@
     $: highlightedHtml = highlightText(text);
 
     function highlightText(t: string): string {
-        const tokens = t.split(/(\(|\)|and|or|\s+)/gi);
+        const tokens = t.split(/(\(|\)|\band\b|\bor\b|\s+)/gi);
         
         return tokens.map(token => {
             if (!token) return '';
             
             const lower = token.toLowerCase();
             if (lower === 'and' || lower === 'or') {
-                return `<span style="color: #c678dd; font-weight: bold;">${escapeHtml(token)}</span>`;
+                return `<span style="color: #c678dd;">${escapeHtml(token)}</span>`;
             } else if (token === '(' || token === ')') {
                 return `<span style="color: #e5c07b;">${escapeHtml(token)}</span>`;
             } else if (token.trim() === '') {
@@ -91,7 +135,9 @@
     }
 </script>
 
-<div class="expression-container" class:invalid={!isValid}>
+<!-- svelte-ignore a11y-click-events-have-key-events -->
+<!-- svelte-ignore a11y-no-static-element-interactions -->
+<div class="expression-container" class:invalid={!isValid} class:is-readonly={readonly} on:click>
     <div class="highlighter" aria-hidden="true" style="transform: translateX(-{scrollLeft}px)">
         {@html highlightedHtml}
     </div>
@@ -102,10 +148,13 @@
         bind:value={text}
         on:scroll={handleScroll}
         on:input={handleInput}
+        on:keyup={saveCursorPos}
+        on:mouseup={saveCursorPos}
         class="real-input"
         spellcheck="false"
         autocomplete="off"
-        placeholder="e.g. (A or B) and Y"
+        placeholder={readonly ? "Unmapped" : "e.g. (A or B) and Y"}
+        {readonly}
     />
 </div>
 
@@ -113,7 +162,6 @@
     .expression-container {
         position: relative;
         width: 100%;
-        max-width: 300px;
         height: 38px;
         overflow: hidden;
         background: var(--bg-surface, #232323);
@@ -135,11 +183,25 @@
         box-shadow: 0 0 0 2px rgba(224, 108, 117, 0.2);
     }
 
+    .expression-container.is-readonly {
+        cursor: pointer;
+        background: var(--bg-surface-hover, #2a2a2a);
+    }
+
+    .expression-container.is-readonly:hover {
+        border-color: #61afef;
+    }
+
+    .expression-container.is-readonly .real-input {
+        cursor: pointer;
+    }
+
     .highlighter {
         position: absolute;
         top: 0;
         left: 0;
-        width: 100%;
+        width: max-content;
+        min-width: 100%;
         height: 100%;
         padding: 8px 12px;
         font-family: inherit;
@@ -149,7 +211,6 @@
         color: transparent;
         pointer-events: none;
         z-index: 1;
-        overflow: hidden;
     }
 
     .real-input {
