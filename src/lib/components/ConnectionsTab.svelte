@@ -128,7 +128,7 @@
                         </div>
                         <div class="connection-info">
                             <span class="controller-name">{CONTROLLER_KIND_LABELS[connection.controller_kind]}</span>
-                            <span class="controller-id">ID: {connection.id.split('-')[0]}...</span>
+                            <!-- span class="controller-id">ID: {connection.id.split('-')[0]}...</--span !-->
                         </div>
                         <div class="connection-actions">
                             <button class="action-btn delete-btn" title="Remove Connection"
@@ -291,10 +291,10 @@
         color: var(--text-color);
     }
 
-    .controller-id {
-        font-size: 12px;
-        color: var(--text-muted);
-    }
+    /*.controller-id {*/
+    /*    font-size: 12px;*/
+    /*    color: var(--text-muted);*/
+    /*}*/
 
     .input-display-container {
         display: flex;

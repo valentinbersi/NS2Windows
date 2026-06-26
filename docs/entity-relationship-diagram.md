@@ -2,13 +2,9 @@
 erDiagram
     CONDITIONS {
         id UUID PK
+        input BLOB
         output TEXT UK
         profile_id UUID UK, FK
-    }
-
-    VALUE_CONDITIONS {
-        conditions_id UUID PK, FK
-        value TEXT
     }
 
     PROFILES {
@@ -18,5 +14,4 @@ erDiagram
     }
 
     CONDITIONS }|--|| PROFILES: "belongs to"
-    VALUE_CONDITIONS |o--|| CONDITIONS: "is"
 ```
