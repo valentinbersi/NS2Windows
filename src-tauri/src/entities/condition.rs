@@ -3,11 +3,13 @@ use sea_orm::prelude::*;
 use sea_orm_migration::prelude::*;
 use uuid::Uuid;
 
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, DeriveEntityModel)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, DeriveEntityModel)]
 #[sea_orm(table_name = "conditions")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
+
+    pub input: Vec<u8>,
 
     pub output: OutputType,
 
@@ -24,20 +26,11 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     Profile,
-
-    #[sea_orm(has_one = "super::value_condition::Entity")]
-    ValueCondition,
 }
 
 impl Related<super::profile::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Profile.def()
-    }
-}
-
-impl Related<super::value_condition::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::ValueCondition.def()
     }
 }
 

@@ -1,2 +1,2 @@
-pub mod condition;
+pub mod input;
 pub mod profile;
