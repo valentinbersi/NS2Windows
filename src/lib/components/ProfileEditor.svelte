@@ -4,9 +4,13 @@
     import type {Input, Output, Profile} from "../types";
     import {ProfileKind, PS4_OUTPUT_LABELS, XBOX360_OUTPUT_LABELS} from "../types";
     import ExpressionInput from "./ExpressionInput.svelte";
+    import MappingModal from "./MappingModal.svelte";
 
     export let profileName: string | null = null;
     export let onBack: () => void;
+
+    let mappingOutputKey: Output | null = null;
+    let mappingLabel: string = "";
 
     let profile: Profile = {
         name: "",
@@ -75,6 +79,24 @@
             alert("Failed to save profile");
         }
     }
+
+    function openMappingModal(key: Output, label: string) {
+        mappingOutputKey = key;
+        mappingLabel = label;
+    }
+
+    function closeMappingModal() {
+        mappingOutputKey = null;
+        mappingLabel = "";
+    }
+
+    function handleMappingAccept(cond: Input | null) {
+        if (mappingOutputKey) {
+            profile.outputs[mappingOutputKey] = cond ?? undefined;
+            profile.outputs = {...profile.outputs}; // Trigger Svelte reactivity
+        }
+        closeMappingModal();
+    }
 </script>
 
 <div class="editor-container">
@@ -140,8 +162,10 @@
                             <td>
                                 <ExpressionInput
                                         id={`input-${key}`}
-                                        bind:value={profile.outputs[key]}
+                                        value={profile.outputs[key]}
                                         bind:isValid={validityMap[key]}
+                                        readonly={true}
+                                        on:click={() => openMappingModal(key, label)}
                                 />
                             </td>
                         </tr>
@@ -150,6 +174,15 @@
                 </table>
             </div>
         </div>
+    {/if}
+
+    {#if mappingOutputKey}
+        <MappingModal
+                title={`Map: ${mappingLabel}`}
+                initialCondition={profile.outputs[mappingOutputKey]}
+                onAccept={handleMappingAccept}
+                onCancel={closeMappingModal}
+        />
     {/if}
 </div>
 
@@ -285,7 +318,7 @@
         font-weight: 500;
         color: var(--text-muted);
         border-bottom: 1px solid var(--border-color);
-        z-index: 1;
+        z-index: 3;
     }
 
     td {
