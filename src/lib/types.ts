@@ -57,14 +57,15 @@ export type Output =
     | "AccelUp" | "AccelDown" | "AccelLeft" | "AccelRight" | "AccelForward" | "AccelBackward"
     | "GyroPitchUp" | "GyroPitchDown" | "GyroRollLeft" | "GyroRollRight" | "GyroYawLeft" | "GyroYawRight";
 
-export interface Condition {
-    Value: NsInput;
-}
+export type Input =
+    | { Value: { input: NsInput } }
+    | { Grouping: { input: Input } }
+    | { Binary: { left: Input, right: Input, operator: "And" | "Or" } };
 
 export interface Profile {
     name: string;
     kind: ProfileKind;
-    outputs: Partial<Record<Output, Condition>>;
+    outputs: Partial<Record<Output, Input>>;
 }
 
 export const CONTROLLER_KIND_LABELS: Record<ControllerKind, string> = {
