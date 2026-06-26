@@ -86,16 +86,24 @@ pub async fn connect_controller(
         }
     });
 
+    let decoder = Decoder;
     let display_frequency = state.display_frequency.clone();
+    let mut previous_display_frequency = display_frequency.load(Ordering::Relaxed);
+    let mut interval = time::interval(Duration::from_secs_f64(
+        1_f64 / previous_display_frequency as f64,
+    ));
     let input_informer = tauri::async_runtime::spawn(async move {
-        let decoder = Decoder;
-
         loop {
-            let display_frequency = display_frequency.load(Ordering::Relaxed) as f64;
+            let display_frequency = display_frequency.load(Ordering::Relaxed);
 
-            time::interval(Duration::from_secs_f64(1_f64 / display_frequency))
-                .tick()
-                .await;
+            if previous_display_frequency != display_frequency {
+                interval =
+                    time::interval(Duration::from_secs_f64(1_f64 / display_frequency as f64));
+            }
+
+            previous_display_frequency = display_frequency;
+
+            interval.tick().await;
 
             let buffer = receiver.borrow().clone();
 

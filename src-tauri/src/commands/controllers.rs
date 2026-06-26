@@ -88,17 +88,26 @@ async fn start_single_controller(
         }
     });
 
-    let emulation_frequency = state.emulation_frequency.clone();
     let decoder = Decoder;
     let evaluator = Evaluator;
     let controller_kind = controller.kind();
+    let emulation_frequency = state.emulation_frequency.clone();
+    let mut previous_emulation_frequency = emulation_frequency.load(Ordering::Relaxed);
+    let mut interval = time::interval(Duration::from_secs_f64(
+        1_f64 / previous_emulation_frequency as f64,
+    ));
     let output_emulator = tauri::async_runtime::spawn(async move {
         loop {
-            let emulation_frequency = emulation_frequency.load(Ordering::Relaxed) as f64;
+            let emulation_frequency = emulation_frequency.load(Ordering::Relaxed);
 
-            time::interval(Duration::from_secs_f64(1_f64 / emulation_frequency))
-                .tick()
-                .await;
+            if previous_emulation_frequency != emulation_frequency {
+                interval =
+                    time::interval(Duration::from_secs_f64(1_f64 / emulation_frequency as f64));
+            }
+
+            previous_emulation_frequency = emulation_frequency;
+
+            interval.tick().await;
 
             let buffer = receiver.borrow().clone();
 
@@ -169,13 +178,22 @@ async fn start_dual_joy_con(
     let decoder = Decoder;
     let evaluator = Evaluator;
     let emulation_frequency = state.emulation_frequency.clone();
+    let mut previous_emulation_frequency = emulation_frequency.load(Ordering::Relaxed);
+    let mut interval = time::interval(Duration::from_secs_f64(
+        1_f64 / previous_emulation_frequency as f64,
+    ));
     let output_task = tauri::async_runtime::spawn(async move {
         loop {
-            let emulation_frequency = emulation_frequency.load(Ordering::Relaxed) as f64;
+            let emulation_frequency = emulation_frequency.load(Ordering::Relaxed);
 
-            time::interval(Duration::from_secs_f64(1_f64 / emulation_frequency))
-                .tick()
-                .await;
+            if previous_emulation_frequency != emulation_frequency {
+                interval =
+                    time::interval(Duration::from_secs_f64(1_f64 / emulation_frequency as f64));
+            }
+
+            previous_emulation_frequency = emulation_frequency;
+
+            interval.tick().await;
 
             let left_buffer = left_receiver.borrow().clone();
             let right_buffer = right_receiver.borrow().clone();
