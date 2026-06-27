@@ -12,18 +12,18 @@ use crate::state::app_state::AppState;
 use crate::state::emulated_controller_task::EmulatedControllerTask;
 use crate::state::ns_controller::NsController;
 use futures::StreamExt;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
-use tauri::async_runtime::JoinHandle;
 use tauri::State;
+use tauri::async_runtime::JoinHandle;
 use tokio::sync::watch;
 use tokio::sync::watch::Sender;
 use tokio::time;
 use uuid::Uuid;
+use vigem_rust::TargetHandle;
 use vigem_rust::client::ClientError;
 use vigem_rust::target::{DualShock4, Xbox360};
-use vigem_rust::TargetHandle;
 
 #[derive(Clone)]
 enum VirtualController {
