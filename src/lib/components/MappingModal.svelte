@@ -58,7 +58,7 @@
     }
 
     function handleAccept() {
-        if (!isValid && condition !== null) return;
+        if (!isValid) return;
         onAccept(condition);
     }
 
@@ -130,7 +130,7 @@
             <button class="secondary-btn" on:click={handleClear}>Clear</button>
             <div class="footer-right">
                 <button on:click={onCancel}>Cancel</button>
-                <button class="primary" disabled={!isValid && condition !== null} on:click={handleAccept}>Accept
+                <button class="primary" disabled={!isValid} on:click={handleAccept}>Accept
                 </button>
             </div>
         </div>

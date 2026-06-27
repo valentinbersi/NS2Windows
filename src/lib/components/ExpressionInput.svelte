@@ -9,7 +9,7 @@
     export let id: string = "";
     export let readonly: boolean = false;
 
-    let text = value === null ? "" : stringifyCondition(value);
+    let text = !value ? "" : stringifyCondition(value);
     let prevValue = value;
     let scrollLeft = 0;
     let inputEl: HTMLInputElement;
@@ -57,7 +57,7 @@
 
     // When value changes from the outside
     $: if (value !== prevValue) {
-        if (value === null) {
+        if (!value) {
             if (isValid) text = "";
         } else {
             text = stringifyCondition(value);
