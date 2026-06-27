@@ -11,7 +11,6 @@ use crate::profiles::profile::Profile;
 use crate::state::app_state::AppState;
 use crate::state::emulated_controller_task::EmulatedControllerTask;
 use crate::state::ns_controller::NsController;
-use btleplug::api::Peripheral as PeripheralApi;
 use futures::StreamExt;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
