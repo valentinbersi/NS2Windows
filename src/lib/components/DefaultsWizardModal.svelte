@@ -1,19 +1,19 @@
 <script lang="ts">
     import {
-        ProfileKind,
-        type Profile,
-        DEFAULT_XBOX,
-        DEFAULT_UPRIGHT_PS4,
-        DEFAULT_FRONT_PS4,
-        DEFAULT_NSO_GC_XBOX,
-        DEFAULT_UPRIGHT_NSO_GC_PS4,
         DEFAULT_FRONT_NSO_GC_PS4,
-        DEFAULT_SIDEWAYS_LEFT_JOY_CON_XBOX,
-        DEFAULT_UPRIGHT_SIDEWAYS_LEFT_JOY_CON_PS4,
+        DEFAULT_FRONT_PS4,
         DEFAULT_FRONT_SIDEWAYS_LEFT_JOY_CON_PS4,
+        DEFAULT_FRONT_SIDEWAYS_RIGHT_JOY_CON_PS4,
+        DEFAULT_NSO_GC_XBOX,
+        DEFAULT_SIDEWAYS_LEFT_JOY_CON_XBOX,
         DEFAULT_SIDEWAYS_RIGHT_JOY_CON_XBOX,
+        DEFAULT_UPRIGHT_NSO_GC_PS4,
+        DEFAULT_UPRIGHT_PS4,
+        DEFAULT_UPRIGHT_SIDEWAYS_LEFT_JOY_CON_PS4,
         DEFAULT_UPRIGHT_SIDEWAYS_RIGHT_JOY_CON_PS4,
-        DEFAULT_FRONT_SIDEWAYS_Right_JOY_CON_PS4
+        DEFAULT_XBOX,
+        type Profile,
+        ProfileKind
     } from "../types";
 
     export let currentKind: ProfileKind;
@@ -28,7 +28,7 @@
 
     function handleApply() {
         let selectedProfile: Profile;
-        
+
         if (currentKind === ProfileKind.Xbox360) {
             switch (physicalSetup) {
                 case "standard":
@@ -57,7 +57,7 @@
                     selectedProfile = orientation === "upright" ? DEFAULT_UPRIGHT_SIDEWAYS_LEFT_JOY_CON_PS4 : DEFAULT_FRONT_SIDEWAYS_LEFT_JOY_CON_PS4;
                     break;
                 case "right_joycon":
-                    selectedProfile = orientation === "upright" ? DEFAULT_UPRIGHT_SIDEWAYS_RIGHT_JOY_CON_PS4 : DEFAULT_FRONT_SIDEWAYS_Right_JOY_CON_PS4;
+                    selectedProfile = orientation === "upright" ? DEFAULT_UPRIGHT_SIDEWAYS_RIGHT_JOY_CON_PS4 : DEFAULT_FRONT_SIDEWAYS_RIGHT_JOY_CON_PS4;
                     break;
             }
         }
@@ -73,11 +73,12 @@
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="modal-content" on:click|stopPropagation>
         <h3>Set Default Mapping</h3>
-        <p class="subtitle">Select your controller configuration to generate default inputs for {currentKind === ProfileKind.Ps4 ? "PlayStation 4" : "Xbox 360"}.</p>
-        
+        <p class="subtitle">Select your controller configuration to generate default inputs
+            for {currentKind === ProfileKind.Ps4 ? "PlayStation 4" : "Xbox 360"}.</p>
+
         <div class="form-group">
             <label for="physicalSetup">Physical Controller Setup</label>
-            <select id="physicalSetup" bind:value={physicalSetup}>
+            <select bind:value={physicalSetup} id="physicalSetup">
                 <option value="standard">Pro Controller / Dual Joy-Cons</option>
                 <option value="nso_gc">NSO GameCube Controller</option>
                 <option value="left_joycon">Left Joy-Con (Sideways)</option>

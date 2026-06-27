@@ -199,19 +199,19 @@ export const DEFAULT_FRONT_PS4: Profile = {
         RightYMinus: {Value: {input: "RightYMinus"}},
         RightYPlus: {Value: {input: "RightYPlus"}},
 
-        AccelUp: {Value: {input: "AccelBackward"}},
-        AccelDown: {Value: {input: "AccelForward"}},
+        AccelUp: {Value: {input: "AccelForward"}},
+        AccelDown: {Value: {input: "AccelBackward"}},
         AccelLeft: {Value: {input: "AccelLeft"}},
         AccelRight: {Value: {input: "AccelRight"}},
-        AccelForward: {Value: {input: "AccelUp"}},
-        AccelBackward: {Value: {input: "AccelDown"}},
+        AccelForward: {Value: {input: "AccelDown"}},
+        AccelBackward: {Value: {input: "AccelUp"}},
 
         GyroPitchUp: {Value: {input: "GyroPitchUp"}},
         GyroPitchDown: {Value: {input: "GyroPitchDown"}},
         GyroRollLeft: {Value: {input: "GyroYawRight"}},
         GyroRollRight: {Value: {input: "GyroYawLeft"}},
-        GyroYawLeft: {Value: {input: "GyroRollRight"}},
-        GyroYawRight: {Value: {input: "GyroRollLeft"}},
+        GyroYawLeft: {Value: {input: "GyroRollLeft"}},
+        GyroYawRight: {Value: {input: "GyroRollRight"}},
     }
 }
 
@@ -337,19 +337,19 @@ export const DEFAULT_FRONT_NSO_GC_PS4: Profile = {
         RightYMinus: {Value: {input: "RightYMinus"}},
         RightYPlus: {Value: {input: "RightYPlus"}},
 
-        AccelUp: {Value: {input: "AccelBackward"}},
-        AccelDown: {Value: {input: "AccelForward"}},
+        AccelUp: {Value: {input: "AccelForward"}},
+        AccelDown: {Value: {input: "AccelBackward"}},
         AccelLeft: {Value: {input: "AccelLeft"}},
         AccelRight: {Value: {input: "AccelRight"}},
-        AccelForward: {Value: {input: "AccelUp"}},
-        AccelBackward: {Value: {input: "AccelDown"}},
+        AccelForward: {Value: {input: "AccelDown"}},
+        AccelBackward: {Value: {input: "AccelUp"}},
 
         GyroPitchUp: {Value: {input: "GyroPitchUp"}},
         GyroPitchDown: {Value: {input: "GyroPitchDown"}},
         GyroRollLeft: {Value: {input: "GyroYawRight"}},
         GyroRollRight: {Value: {input: "GyroYawLeft"}},
-        GyroYawLeft: {Value: {input: "GyroRollRight"}},
-        GyroYawRight: {Value: {input: "GyroRollLeft"}},
+        GyroYawLeft: {Value: {input: "GyroRollLeft"}},
+        GyroYawRight: {Value: {input: "GyroRollRight"}},
     }
 }
 
@@ -406,8 +406,8 @@ export const DEFAULT_UPRIGHT_SIDEWAYS_LEFT_JOY_CON_PS4: Profile = {
         AccelForward: {Value: {input: "AccelForward"}},
         AccelBackward: {Value: {input: "AccelBackward"}},
 
-        GyroPitchUp: {Value: {input: "GyroYawRight"}},
-        GyroPitchDown: {Value: {input: "GyroYawLeft"}},
+        GyroPitchUp: {Value: {input: "GyroYawLeft"}},
+        GyroPitchDown: {Value: {input: "GyroYawRight"}},
         GyroRollLeft: {Value: {input: "GyroRollLeft"}},
         GyroRollRight: {Value: {input: "GyroRollRight"}},
         GyroYawLeft: {Value: {input: "GyroPitchUp"}},
@@ -438,17 +438,17 @@ export const DEFAULT_FRONT_SIDEWAYS_LEFT_JOY_CON_PS4: Profile = {
         LeftYMinus: {Value: {input: "LeftXMinus"}},
         LeftYPlus: {Value: {input: "LeftXPlus"}},
 
-        AccelUp: {Value: {input: "AccelBackward"}},
-        AccelDown: {Value: {input: "AccelForward"}},
+        AccelUp: {Value: {input: "AccelForward"}},
+        AccelDown: {Value: {input: "AccelBackward"}},
         AccelLeft: {Value: {input: "AccelUp"}},
         AccelRight: {Value: {input: "AccelDown"}},
-        AccelForward: {Value: {input: "AccelRight"}},
-        AccelBackward: {Value: {input: "AccelLeft"}},
+        AccelForward: {Value: {input: "AccelLeft"}},
+        AccelBackward: {Value: {input: "AccelRight"}},
 
-        GyroPitchUp: {Value: {input: "GyroYawRight"}},
-        GyroPitchDown: {Value: {input: "GyroYawLeft"}},
-        GyroRollLeft: {Value: {input: "GyroPitchDown"}},
-        GyroRollRight: {Value: {input: "GyroPitchUp"}},
+        GyroPitchUp: {Value: {input: "GyroYawLeft"}},
+        GyroPitchDown: {Value: {input: "GyroYawRight"}},
+        GyroRollLeft: {Value: {input: "GyroPitchUp"}},
+        GyroRollRight: {Value: {input: "GyroPitchDown"}},
         GyroYawLeft: {Value: {input: "GyroRollLeft"}},
         GyroYawRight: {Value: {input: "GyroRollRight"}},
     }
@@ -472,10 +472,10 @@ export const DEFAULT_SIDEWAYS_RIGHT_JOY_CON_XBOX: Profile = {
 
         OptionsStart: {Value: {input: "Plus"}},
 
-        LeftXMinus: {Value: {input: "LeftYMinus"}},
-        LeftXPlus: {Value: {input: "LeftYPlus"}},
-        LeftYMinus: {Value: {input: "LeftXPlus"}},
-        LeftYPlus: {Value: {input: "LeftXMinus"}},
+        LeftXMinus: {Value: {input: "RightYMinus"}},
+        LeftXPlus: {Value: {input: "RightYPlus"}},
+        LeftYMinus: {Value: {input: "RightXPlus"}},
+        LeftYPlus: {Value: {input: "RightXMinus"}},
     }
 }
 
@@ -497,10 +497,10 @@ export const DEFAULT_UPRIGHT_SIDEWAYS_RIGHT_JOY_CON_PS4: Profile = {
 
         OptionsStart: {Value: {input: "Plus"}},
 
-        LeftXMinus: {Value: {input: "LeftYMinus"}},
-        LeftXPlus: {Value: {input: "LeftYPlus"}},
-        LeftYMinus: {Value: {input: "LeftXPlus"}},
-        LeftYPlus: {Value: {input: "LeftXMinus"}},
+        LeftXMinus: {Value: {input: "RightYMinus"}},
+        LeftXPlus: {Value: {input: "RightYPlus"}},
+        LeftYMinus: {Value: {input: "RightXPlus"}},
+        LeftYPlus: {Value: {input: "RightXMinus"}},
 
         AccelUp: {Value: {input: "AccelLeft"}},
         AccelDown: {Value: {input: "AccelRight"}},
@@ -509,16 +509,16 @@ export const DEFAULT_UPRIGHT_SIDEWAYS_RIGHT_JOY_CON_PS4: Profile = {
         AccelForward: {Value: {input: "AccelForward"}},
         AccelBackward: {Value: {input: "AccelBackward"}},
 
-        GyroPitchUp: {Value: {input: "GyroYawLeft"}},
-        GyroPitchDown: {Value: {input: "GyroYawRight"}},
+        GyroPitchUp: {Value: {input: "GyroYawRight"}},
+        GyroPitchDown: {Value: {input: "GyroYawLeft"}},
         GyroRollLeft: {Value: {input: "GyroRollLeft"}},
         GyroRollRight: {Value: {input: "GyroRollRight"}},
-        GyroYawLeft: {Value: {input: "GyroPitchDown"}},
-        GyroYawRight: {Value: {input: "GyroPitchUp"}},
+        GyroYawLeft: {Value: {input: "GyroPitchUp"}},
+        GyroYawRight: {Value: {input: "GyroPitchDown"}},
     }
 }
 
-export const DEFAULT_FRONT_SIDEWAYS_Right_JOY_CON_PS4: Profile = {
+export const DEFAULT_FRONT_SIDEWAYS_RIGHT_JOY_CON_PS4: Profile = {
     name: "Default Front Sideways Right Joy Con Ps4",
     kind: ProfileKind.Ps4,
     outputs: {
@@ -536,22 +536,22 @@ export const DEFAULT_FRONT_SIDEWAYS_Right_JOY_CON_PS4: Profile = {
 
         OptionsStart: {Value: {input: "Plus"}},
 
-        LeftXMinus: {Value: {input: "LeftYMinus"}},
-        LeftXPlus: {Value: {input: "LeftYPlus"}},
-        LeftYMinus: {Value: {input: "LeftXPlus"}},
-        LeftYPlus: {Value: {input: "LeftXMinus"}},
+        LeftXMinus: {Value: {input: "RightYMinus"}},
+        LeftXPlus: {Value: {input: "RightYPlus"}},
+        LeftYMinus: {Value: {input: "RightXPlus"}},
+        LeftYPlus: {Value: {input: "RightXMinus"}},
 
-        AccelUp: {Value: {input: "AccelBackward"}},
-        AccelDown: {Value: {input: "AccelForward"}},
+        AccelUp: {Value: {input: "AccelForward"}},
+        AccelDown: {Value: {input: "AccelBackward"}},
         AccelLeft: {Value: {input: "AccelDown"}},
         AccelRight: {Value: {input: "AccelUp"}},
-        AccelForward: {Value: {input: "AccelLeft"}},
-        AccelBackward: {Value: {input: "AccelRight"}},
+        AccelForward: {Value: {input: "AccelRight"}},
+        AccelBackward: {Value: {input: "AccelLeft"}},
 
-        GyroPitchUp: {Value: {input: "GyroYawLeft"}},
-        GyroPitchDown: {Value: {input: "GyroYawRight"}},
-        GyroRollLeft: {Value: {input: "GyroPitchUp"}},
-        GyroRollRight: {Value: {input: "GyroPitchDown"}},
+        GyroPitchUp: {Value: {input: "GyroYawRight"}},
+        GyroPitchDown: {Value: {input: "GyroYawLeft"}},
+        GyroRollLeft: {Value: {input: "GyroPitchDown"}},
+        GyroRollRight: {Value: {input: "GyroPitchUp"}},
         GyroYawLeft: {Value: {input: "GyroRollLeft"}},
         GyroYawRight: {Value: {input: "GyroRollRight"}},
     }
