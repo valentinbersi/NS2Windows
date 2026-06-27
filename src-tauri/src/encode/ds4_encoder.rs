@@ -20,7 +20,7 @@ impl Ds4Encoder {
     const STICK_CENTER: f32 = 128_f32;
 
     fn axis(&self, data: &OutputData, minus: Output, plus: Output) -> f32 {
-        let minus = data.get(minus).unwrap_or(0_f32);
+        let minus = -data.get(minus).unwrap_or(0_f32);
         let plus = data.get(plus).unwrap_or(0_f32);
 
         minus + plus
