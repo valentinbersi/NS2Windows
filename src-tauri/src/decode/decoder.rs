@@ -344,10 +344,10 @@ impl Decoder {
 
             NsInput::GyroPitchUp => gyro_x.clamp(0, i16::MAX) as f32 / 16.384,
             NsInput::GyroPitchDown => gyro_x.clamp(i16::MIN, 0) as f32 / 16.384,
-            NsInput::GyroRollRight => gyro_y.clamp(0, i16::MAX) as f32 / 16.384,
-            NsInput::GyroRollLeft => gyro_y.clamp(i16::MIN, 0) as f32 / 16.384,
-            NsInput::GyroYawRight => gyro_z.clamp(0, i16::MAX) as f32 / 16.384,
-            NsInput::GyroYawLeft => gyro_z.clamp(i16::MIN, 0) as f32 / 16.384,
+            NsInput::GyroRollRight => gyro_z.clamp(0, i16::MAX) as f32 / 16.384,
+            NsInput::GyroRollLeft => gyro_z.clamp(i16::MIN, 0) as f32 / 16.384,
+            NsInput::GyroYawRight => gyro_y.clamp(0, i16::MAX) as f32 / 16.384,
+            NsInput::GyroYawLeft => gyro_y.clamp(i16::MIN, 0) as f32 / 16.384,
         }
     }
 
