@@ -129,9 +129,9 @@ impl Decoder {
         let stick = self.decode_joystick(&buffer[LEFT_STICK_RANGE]);
 
         hashmap! {
-            NsInput::LeftXMinus => stick.x.clamp(-1_f32, 0_f32),
+            NsInput::LeftXMinus => -stick.x.clamp(-1_f32, 0_f32),
             NsInput::LeftXPlus => stick.x.clamp(0_f32, 1_f32),
-            NsInput::LeftYMinus => stick.y.clamp(-1_f32, 0_f32),
+            NsInput::LeftYMinus => -stick.y.clamp(-1_f32, 0_f32),
             NsInput::LeftYPlus => stick.y.clamp(0_f32, 1_f32),
         }
     }
@@ -144,9 +144,9 @@ impl Decoder {
         let stick = self.decode_joystick(&buffer[RIGHT_STICK_RANGE]);
 
         hashmap! {
-            NsInput::RightXMinus => stick.x.clamp(-1_f32, 0_f32),
+            NsInput::RightXMinus => -stick.x.clamp(-1_f32, 0_f32),
             NsInput::RightXPlus => stick.x.clamp(0_f32, 1_f32),
-            NsInput::RightYMinus => stick.y.clamp(-1_f32, 0_f32),
+            NsInput::RightYMinus => -stick.y.clamp(-1_f32, 0_f32),
             NsInput::RightYPlus => stick.y.clamp(0_f32, 1_f32),
         }
     }
@@ -336,18 +336,18 @@ impl Decoder {
 
         hashmap! {
             NsInput::AccelUp => accel_y.clamp(0, i16::MAX) as f32 / 16.384,
-            NsInput::AccelDown => accel_y.clamp(i16::MIN, 0) as f32 / 16.384,
+            NsInput::AccelDown => -accel_y.clamp(i16::MIN, 0) as f32 / 16.384,
             NsInput::AccelRight => accel_x.clamp(0, i16::MAX) as f32 / 16.384,
-            NsInput::AccelLeft => accel_x.clamp(i16::MIN, 0) as f32 / 16.384,
+            NsInput::AccelLeft => -accel_x.clamp(i16::MIN, 0) as f32 / 16.384,
             NsInput::AccelForward => accel_z.clamp(0, i16::MAX) as f32 / 16.384,
-            NsInput::AccelBackward => accel_z.clamp(i16::MIN, 0) as f32 / 16.384,
+            NsInput::AccelBackward => -accel_z.clamp(i16::MIN, 0) as f32 / 16.384,
 
             NsInput::GyroPitchUp => gyro_x.clamp(0, i16::MAX) as f32 / 16.384,
-            NsInput::GyroPitchDown => gyro_x.clamp(i16::MIN, 0) as f32 / 16.384,
+            NsInput::GyroPitchDown => -gyro_x.clamp(i16::MIN, 0) as f32 / 16.384,
             NsInput::GyroRollRight => gyro_z.clamp(0, i16::MAX) as f32 / 16.384,
-            NsInput::GyroRollLeft => gyro_z.clamp(i16::MIN, 0) as f32 / 16.384,
+            NsInput::GyroRollLeft => -gyro_z.clamp(i16::MIN, 0) as f32 / 16.384,
             NsInput::GyroYawRight => gyro_y.clamp(0, i16::MAX) as f32 / 16.384,
-            NsInput::GyroYawLeft => gyro_y.clamp(i16::MIN, 0) as f32 / 16.384,
+            NsInput::GyroYawLeft => -gyro_y.clamp(i16::MIN, 0) as f32 / 16.384,
         }
     }
 
