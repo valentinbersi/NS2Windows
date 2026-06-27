@@ -66,7 +66,11 @@
     }
 </script>
 
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="modal-backdrop" on:click={onCancel}>
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="modal-content" on:click|stopPropagation>
         <h3>Set Default Mapping</h3>
         <p class="subtitle">Select your controller configuration to generate default inputs for {currentKind === ProfileKind.Ps4 ? "PlayStation 4" : "Xbox 360"}.</p>
