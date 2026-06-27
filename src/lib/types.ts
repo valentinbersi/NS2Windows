@@ -68,6 +68,495 @@ export interface Profile {
     outputs: Partial<Record<Output, Input>>;
 }
 
+export const DEFAULT_XBOX: Profile = {
+    name: "Default Xbox",
+    kind: ProfileKind.Xbox360,
+    outputs: {
+        CrossA: {Value: {input: "B"}},
+        CircleB: {Value: {input: "A"}},
+        SquareX: {Value: {input: "Y"}},
+        TriangleY: {Value: {input: "X"}},
+
+        PsGuide: {Value: {input: "Home"}},
+
+        R1Rb: {Value: {input: "R"}},
+        R2Rt: {Value: {input: "Zr"}},
+        R3Rs: {Value: {input: "Tr"}},
+
+        L1Lb: {Value: {input: "L"}},
+        L2Lt: {Value: {input: "Zl"}},
+        L3Ls: {Value: {input: "Tl"}},
+
+        OptionsStart: {Value: {input: "Plus"}},
+        TouchpadBack: {Value: {input: "Minus"}},
+
+        Down: {Value: {input: "Down"}},
+        Left: {Value: {input: "Left"}},
+        Right: {Value: {input: "Right"}},
+        Up: {Value: {input: "Up"}},
+
+        LeftXMinus: {Value: {input: "LeftXMinus"}},
+        LeftXPlus: {Value: {input: "LeftXPlus"}},
+        LeftYMinus: {Value: {input: "LeftYMinus"}},
+        LeftYPlus: {Value: {input: "LeftYPlus"}},
+
+        RightXMinus: {Value: {input: "RightXMinus"}},
+        RightXPlus: {Value: {input: "RightXPlus"}},
+        RightYMinus: {Value: {input: "RightYMinus"}},
+        RightYPlus: {Value: {input: "RightYPlus"}},
+    }
+}
+
+export const DEFAULT_UPRIGHT_PS4: Profile = {
+    name: "Default Upright Ps4",
+    kind: ProfileKind.Ps4,
+    outputs: {
+        CrossA: {Value: {input: "B"}},
+        CircleB: {Value: {input: "A"}},
+        SquareX: {Value: {input: "Y"}},
+        TriangleY: {Value: {input: "X"}},
+
+        PsGuide: {Value: {input: "Home"}},
+        Share: {Value: {input: "Capture"}},
+
+        R1Rb: {Value: {input: "R"}},
+        R2Rt: {Value: {input: "Zr"}},
+        R3Rs: {Value: {input: "Tr"}},
+
+        L1Lb: {Value: {input: "L"}},
+        L2Lt: {Value: {input: "Zl"}},
+        L3Ls: {Value: {input: "Tl"}},
+
+        OptionsStart: {Value: {input: "Plus"}},
+        TouchpadBack: {Value: {input: "Minus"}},
+
+        Down: {Value: {input: "Down"}},
+        Left: {Value: {input: "Left"}},
+        Right: {Value: {input: "Right"}},
+        Up: {Value: {input: "Up"}},
+
+        LeftXMinus: {Value: {input: "LeftXMinus"}},
+        LeftXPlus: {Value: {input: "LeftXPlus"}},
+        LeftYMinus: {Value: {input: "LeftYMinus"}},
+        LeftYPlus: {Value: {input: "LeftYPlus"}},
+
+        RightXMinus: {Value: {input: "RightXMinus"}},
+        RightXPlus: {Value: {input: "RightXPlus"}},
+        RightYMinus: {Value: {input: "RightYMinus"}},
+        RightYPlus: {Value: {input: "RightYPlus"}},
+
+        AccelUp: {Value: {input: "AccelUp"}},
+        AccelDown: {Value: {input: "AccelDown"}},
+        AccelLeft: {Value: {input: "AccelLeft"}},
+        AccelRight: {Value: {input: "AccelRight"}},
+        AccelForward: {Value: {input: "AccelForward"}},
+        AccelBackward: {Value: {input: "AccelBackward"}},
+
+        GyroPitchUp: {Value: {input: "GyroPitchUp"}},
+        GyroPitchDown: {Value: {input: "GyroPitchDown"}},
+        GyroRollLeft: {Value: {input: "GyroRollLeft"}},
+        GyroRollRight: {Value: {input: "GyroRollRight"}},
+        GyroYawLeft: {Value: {input: "GyroYawLeft"}},
+        GyroYawRight: {Value: {input: "GyroYawRight"}},
+    }
+}
+
+export const DEFAULT_FRONT_PS4: Profile = {
+    name: "Default Front Ps4",
+    kind: ProfileKind.Ps4,
+    outputs: {
+        CrossA: {Value: {input: "B"}},
+        CircleB: {Value: {input: "A"}},
+        SquareX: {Value: {input: "Y"}},
+        TriangleY: {Value: {input: "X"}},
+
+        PsGuide: {Value: {input: "Home"}},
+        Share: {Value: {input: "Capture"}},
+
+        R1Rb: {Value: {input: "R"}},
+        R2Rt: {Value: {input: "Zr"}},
+        R3Rs: {Value: {input: "Tr"}},
+
+        L1Lb: {Value: {input: "L"}},
+        L2Lt: {Value: {input: "Zl"}},
+        L3Ls: {Value: {input: "Tl"}},
+
+        OptionsStart: {Value: {input: "Plus"}},
+        TouchpadBack: {Value: {input: "Minus"}},
+
+        Down: {Value: {input: "Down"}},
+        Left: {Value: {input: "Left"}},
+        Right: {Value: {input: "Right"}},
+        Up: {Value: {input: "Up"}},
+
+        LeftXMinus: {Value: {input: "LeftXMinus"}},
+        LeftXPlus: {Value: {input: "LeftXPlus"}},
+        LeftYMinus: {Value: {input: "LeftYMinus"}},
+        LeftYPlus: {Value: {input: "LeftYPlus"}},
+
+        RightXMinus: {Value: {input: "RightXMinus"}},
+        RightXPlus: {Value: {input: "RightXPlus"}},
+        RightYMinus: {Value: {input: "RightYMinus"}},
+        RightYPlus: {Value: {input: "RightYPlus"}},
+
+        AccelUp: {Value: {input: "AccelForward"}},
+        AccelDown: {Value: {input: "AccelBackward"}},
+        AccelLeft: {Value: {input: "AccelLeft"}},
+        AccelRight: {Value: {input: "AccelRight"}},
+        AccelForward: {Value: {input: "AccelDown"}},
+        AccelBackward: {Value: {input: "AccelUp"}},
+
+        GyroPitchUp: {Value: {input: "GyroPitchUp"}},
+        GyroPitchDown: {Value: {input: "GyroPitchDown"}},
+        GyroRollLeft: {Value: {input: "GyroYawRight"}},
+        GyroRollRight: {Value: {input: "GyroYawLeft"}},
+        GyroYawLeft: {Value: {input: "GyroRollLeft"}},
+        GyroYawRight: {Value: {input: "GyroRollRight"}},
+    }
+}
+
+export const DEFAULT_NSO_GC_XBOX: Profile = {
+    name: "Default NSO GC XBOX",
+    kind: ProfileKind.Xbox360,
+    outputs: {
+        CrossA: {Value: {input: "B"}},
+        CircleB: {Value: {input: "A"}},
+        SquareX: {Value: {input: "Y"}},
+        TriangleY: {Value: {input: "X"}},
+
+        PsGuide: {Value: {input: "Home"}},
+
+        R1Rb: {Value: {input: "Zr"}},
+        R2Rt: {Binary: {left: {Value: {input: "RTrigger"}}, right: {Value: {input: "R"}}, operator: "Or"}},
+
+        L1Lb: {Value: {input: "Zl"}},
+        L2Lt: {Binary: {left: {Value: {input: "LTrigger"}}, right: {Value: {input: "L"}}, operator: "Or"}},
+
+        OptionsStart: {Value: {input: "Plus"}},
+
+        Down: {Value: {input: "Down"}},
+        Left: {Value: {input: "Left"}},
+        Right: {Value: {input: "Right"}},
+        Up: {Value: {input: "Up"}},
+
+        LeftXMinus: {Value: {input: "LeftXMinus"}},
+        LeftXPlus: {Value: {input: "LeftXPlus"}},
+        LeftYMinus: {Value: {input: "LeftYMinus"}},
+        LeftYPlus: {Value: {input: "LeftYPlus"}},
+
+        RightXMinus: {Value: {input: "RightXMinus"}},
+        RightXPlus: {Value: {input: "RightXPlus"}},
+        RightYMinus: {Value: {input: "RightYMinus"}},
+        RightYPlus: {Value: {input: "RightYPlus"}},
+    }
+}
+
+export const DEFAULT_UPRIGHT_NSO_GC_PS4: Profile = {
+    name: "Default Upright NSO GC Ps4",
+    kind: ProfileKind.Ps4,
+    outputs: {
+        CrossA: {Value: {input: "B"}},
+        CircleB: {Value: {input: "A"}},
+        SquareX: {Value: {input: "Y"}},
+        TriangleY: {Value: {input: "X"}},
+
+        PsGuide: {Value: {input: "Home"}},
+        Share: {Value: {input: "Capture"}},
+
+        R1Rb: {Value: {input: "Zr"}},
+        R2Rt: {Binary: {left: {Value: {input: "RTrigger"}}, right: {Value: {input: "R"}}, operator: "Or"}},
+
+        L1Lb: {Value: {input: "Zl"}},
+        L2Lt: {Binary: {left: {Value: {input: "LTrigger"}}, right: {Value: {input: "L"}}, operator: "Or"}},
+
+        OptionsStart: {Value: {input: "Plus"}},
+
+        Down: {Value: {input: "Down"}},
+        Left: {Value: {input: "Left"}},
+        Right: {Value: {input: "Right"}},
+        Up: {Value: {input: "Up"}},
+
+        LeftXMinus: {Value: {input: "LeftXMinus"}},
+        LeftXPlus: {Value: {input: "LeftXPlus"}},
+        LeftYMinus: {Value: {input: "LeftYMinus"}},
+        LeftYPlus: {Value: {input: "LeftYPlus"}},
+
+        RightXMinus: {Value: {input: "RightXMinus"}},
+        RightXPlus: {Value: {input: "RightXPlus"}},
+        RightYMinus: {Value: {input: "RightYMinus"}},
+        RightYPlus: {Value: {input: "RightYPlus"}},
+
+        AccelUp: {Value: {input: "AccelUp"}},
+        AccelDown: {Value: {input: "AccelDown"}},
+        AccelLeft: {Value: {input: "AccelLeft"}},
+        AccelRight: {Value: {input: "AccelRight"}},
+        AccelForward: {Value: {input: "AccelForward"}},
+        AccelBackward: {Value: {input: "AccelBackward"}},
+
+        GyroPitchUp: {Value: {input: "GyroPitchUp"}},
+        GyroPitchDown: {Value: {input: "GyroPitchDown"}},
+        GyroRollLeft: {Value: {input: "GyroRollLeft"}},
+        GyroRollRight: {Value: {input: "GyroRollRight"}},
+        GyroYawLeft: {Value: {input: "GyroYawLeft"}},
+        GyroYawRight: {Value: {input: "GyroYawRight"}},
+    }
+}
+
+export const DEFAULT_FRONT_NSO_GC_PS4: Profile = {
+    name: "Default Front NSO GC Ps4",
+    kind: ProfileKind.Ps4,
+    outputs: {
+        CrossA: {Value: {input: "B"}},
+        CircleB: {Value: {input: "A"}},
+        SquareX: {Value: {input: "Y"}},
+        TriangleY: {Value: {input: "X"}},
+
+        PsGuide: {Value: {input: "Home"}},
+        Share: {Value: {input: "Capture"}},
+
+        R1Rb: {Value: {input: "Zr"}},
+        R2Rt: {Binary: {left: {Value: {input: "RTrigger"}}, right: {Value: {input: "R"}}, operator: "Or"}},
+
+        L1Lb: {Value: {input: "Zl"}},
+        L2Lt: {Binary: {left: {Value: {input: "LTrigger"}}, right: {Value: {input: "L"}}, operator: "Or"}},
+
+        OptionsStart: {Value: {input: "Plus"}},
+
+        Down: {Value: {input: "Down"}},
+        Left: {Value: {input: "Left"}},
+        Right: {Value: {input: "Right"}},
+        Up: {Value: {input: "Up"}},
+
+        LeftXMinus: {Value: {input: "LeftXMinus"}},
+        LeftXPlus: {Value: {input: "LeftXPlus"}},
+        LeftYMinus: {Value: {input: "LeftYMinus"}},
+        LeftYPlus: {Value: {input: "LeftYPlus"}},
+
+        RightXMinus: {Value: {input: "RightXMinus"}},
+        RightXPlus: {Value: {input: "RightXPlus"}},
+        RightYMinus: {Value: {input: "RightYMinus"}},
+        RightYPlus: {Value: {input: "RightYPlus"}},
+
+        AccelUp: {Value: {input: "AccelForward"}},
+        AccelDown: {Value: {input: "AccelBackward"}},
+        AccelLeft: {Value: {input: "AccelLeft"}},
+        AccelRight: {Value: {input: "AccelRight"}},
+        AccelForward: {Value: {input: "AccelDown"}},
+        AccelBackward: {Value: {input: "AccelUp"}},
+
+        GyroPitchUp: {Value: {input: "GyroPitchUp"}},
+        GyroPitchDown: {Value: {input: "GyroPitchDown"}},
+        GyroRollLeft: {Value: {input: "GyroYawRight"}},
+        GyroRollRight: {Value: {input: "GyroYawLeft"}},
+        GyroYawLeft: {Value: {input: "GyroRollLeft"}},
+        GyroYawRight: {Value: {input: "GyroRollRight"}},
+    }
+}
+
+export const DEFAULT_SIDEWAYS_LEFT_JOY_CON_XBOX: Profile = {
+    name: "Default Sideways Left Joy Con Xbox",
+    kind: ProfileKind.Xbox360,
+    outputs: {
+        CrossA: {Value: {input: "Left"}},
+        CircleB: {Value: {input: "Down"}},
+        SquareX: {Value: {input: "Up"}},
+        TriangleY: {Value: {input: "Right"}},
+
+        R1Rb: {Value: {input: "Sr"}},
+
+        L1Lb: {Value: {input: "Sl"}},
+        L3Ls: {Value: {input: "Tl"}},
+
+        OptionsStart: {Value: {input: "Minus"}},
+
+        LeftXMinus: {Value: {input: "LeftYPlus"}},
+        LeftXPlus: {Value: {input: "LeftYMinus"}},
+        LeftYMinus: {Value: {input: "LeftXMinus"}},
+        LeftYPlus: {Value: {input: "LeftXPlus"}},
+    }
+}
+
+export const DEFAULT_UPRIGHT_SIDEWAYS_LEFT_JOY_CON_PS4: Profile = {
+    name: "Default Upright Sideways Left Joy Con Ps4",
+    kind: ProfileKind.Ps4,
+    outputs: {
+        CrossA: {Value: {input: "Left"}},
+        CircleB: {Value: {input: "Down"}},
+        SquareX: {Value: {input: "Up"}},
+        TriangleY: {Value: {input: "Right"}},
+
+        Share: {Value: {input: "Capture"}},
+
+        R1Rb: {Value: {input: "Sr"}},
+
+        L1Lb: {Value: {input: "Sl"}},
+        L3Ls: {Value: {input: "Tl"}},
+
+        OptionsStart: {Value: {input: "Minus"}},
+
+        LeftXMinus: {Value: {input: "LeftYPlus"}},
+        LeftXPlus: {Value: {input: "LeftYMinus"}},
+        LeftYMinus: {Value: {input: "LeftXMinus"}},
+        LeftYPlus: {Value: {input: "LeftXPlus"}},
+
+        AccelUp: {Value: {input: "AccelRight"}},
+        AccelDown: {Value: {input: "AccelLeft"}},
+        AccelLeft: {Value: {input: "AccelUp"}},
+        AccelRight: {Value: {input: "AccelDown"}},
+        AccelForward: {Value: {input: "AccelForward"}},
+        AccelBackward: {Value: {input: "AccelBackward"}},
+
+        GyroPitchUp: {Value: {input: "GyroYawLeft"}},
+        GyroPitchDown: {Value: {input: "GyroYawRight"}},
+        GyroRollLeft: {Value: {input: "GyroRollLeft"}},
+        GyroRollRight: {Value: {input: "GyroRollRight"}},
+        GyroYawLeft: {Value: {input: "GyroPitchUp"}},
+        GyroYawRight: {Value: {input: "GyroPitchDown"}},
+    }
+}
+
+export const DEFAULT_FRONT_SIDEWAYS_LEFT_JOY_CON_PS4: Profile = {
+    name: "Default Front Sideways Left Joy Con Ps4",
+    kind: ProfileKind.Ps4,
+    outputs: {
+        CrossA: {Value: {input: "Left"}},
+        CircleB: {Value: {input: "Down"}},
+        SquareX: {Value: {input: "Up"}},
+        TriangleY: {Value: {input: "Right"}},
+
+        Share: {Value: {input: "Capture"}},
+
+        R1Rb: {Value: {input: "Sr"}},
+
+        L1Lb: {Value: {input: "Sl"}},
+        L3Ls: {Value: {input: "Tl"}},
+
+        OptionsStart: {Value: {input: "Minus"}},
+
+        LeftXMinus: {Value: {input: "LeftYPlus"}},
+        LeftXPlus: {Value: {input: "LeftYMinus"}},
+        LeftYMinus: {Value: {input: "LeftXMinus"}},
+        LeftYPlus: {Value: {input: "LeftXPlus"}},
+
+        AccelUp: {Value: {input: "AccelForward"}},
+        AccelDown: {Value: {input: "AccelBackward"}},
+        AccelLeft: {Value: {input: "AccelUp"}},
+        AccelRight: {Value: {input: "AccelDown"}},
+        AccelForward: {Value: {input: "AccelLeft"}},
+        AccelBackward: {Value: {input: "AccelRight"}},
+
+        GyroPitchUp: {Value: {input: "GyroYawLeft"}},
+        GyroPitchDown: {Value: {input: "GyroYawRight"}},
+        GyroRollLeft: {Value: {input: "GyroPitchUp"}},
+        GyroRollRight: {Value: {input: "GyroPitchDown"}},
+        GyroYawLeft: {Value: {input: "GyroRollLeft"}},
+        GyroYawRight: {Value: {input: "GyroRollRight"}},
+    }
+}
+
+export const DEFAULT_SIDEWAYS_RIGHT_JOY_CON_XBOX: Profile = {
+    name: "Default Sideways Right Joy Con Xbox",
+    kind: ProfileKind.Xbox360,
+    outputs: {
+        CrossA: {Value: {input: "A"}},
+        CircleB: {Value: {input: "X"}},
+        SquareX: {Value: {input: "B"}},
+        TriangleY: {Value: {input: "Y"}},
+
+        PsGuide: {Value: {input: "Home"}},
+
+        R1Rb: {Value: {input: "Sr"}},
+
+        L1Lb: {Value: {input: "Sl"}},
+        L3Ls: {Value: {input: "Tr"}},
+
+        OptionsStart: {Value: {input: "Plus"}},
+
+        LeftXMinus: {Value: {input: "RightYMinus"}},
+        LeftXPlus: {Value: {input: "RightYPlus"}},
+        LeftYMinus: {Value: {input: "RightXPlus"}},
+        LeftYPlus: {Value: {input: "RightXMinus"}},
+    }
+}
+
+export const DEFAULT_UPRIGHT_SIDEWAYS_RIGHT_JOY_CON_PS4: Profile = {
+    name: "Default Upright Sideways Right Joy Con Ps4",
+    kind: ProfileKind.Ps4,
+    outputs: {
+        CrossA: {Value: {input: "A"}},
+        CircleB: {Value: {input: "X"}},
+        SquareX: {Value: {input: "B"}},
+        TriangleY: {Value: {input: "Y"}},
+
+        PsGuide: {Value: {input: "Home"}},
+
+        R1Rb: {Value: {input: "Sr"}},
+
+        L1Lb: {Value: {input: "Sl"}},
+        L3Ls: {Value: {input: "Tr"}},
+
+        OptionsStart: {Value: {input: "Plus"}},
+
+        LeftXMinus: {Value: {input: "RightYMinus"}},
+        LeftXPlus: {Value: {input: "RightYPlus"}},
+        LeftYMinus: {Value: {input: "RightXPlus"}},
+        LeftYPlus: {Value: {input: "RightXMinus"}},
+
+        AccelUp: {Value: {input: "AccelLeft"}},
+        AccelDown: {Value: {input: "AccelRight"}},
+        AccelLeft: {Value: {input: "AccelDown"}},
+        AccelRight: {Value: {input: "AccelUp"}},
+        AccelForward: {Value: {input: "AccelForward"}},
+        AccelBackward: {Value: {input: "AccelBackward"}},
+
+        GyroPitchUp: {Value: {input: "GyroYawRight"}},
+        GyroPitchDown: {Value: {input: "GyroYawLeft"}},
+        GyroRollLeft: {Value: {input: "GyroRollLeft"}},
+        GyroRollRight: {Value: {input: "GyroRollRight"}},
+        GyroYawLeft: {Value: {input: "GyroPitchUp"}},
+        GyroYawRight: {Value: {input: "GyroPitchDown"}},
+    }
+}
+
+export const DEFAULT_FRONT_SIDEWAYS_RIGHT_JOY_CON_PS4: Profile = {
+    name: "Default Front Sideways Right Joy Con Ps4",
+    kind: ProfileKind.Ps4,
+    outputs: {
+        CrossA: {Value: {input: "A"}},
+        CircleB: {Value: {input: "X"}},
+        SquareX: {Value: {input: "B"}},
+        TriangleY: {Value: {input: "Y"}},
+
+        PsGuide: {Value: {input: "Home"}},
+
+        R1Rb: {Value: {input: "Sr"}},
+
+        L1Lb: {Value: {input: "Sl"}},
+        L3Ls: {Value: {input: "Tr"}},
+
+        OptionsStart: {Value: {input: "Plus"}},
+
+        LeftXMinus: {Value: {input: "RightYMinus"}},
+        LeftXPlus: {Value: {input: "RightYPlus"}},
+        LeftYMinus: {Value: {input: "RightXPlus"}},
+        LeftYPlus: {Value: {input: "RightXMinus"}},
+
+        AccelUp: {Value: {input: "AccelForward"}},
+        AccelDown: {Value: {input: "AccelBackward"}},
+        AccelLeft: {Value: {input: "AccelDown"}},
+        AccelRight: {Value: {input: "AccelUp"}},
+        AccelForward: {Value: {input: "AccelRight"}},
+        AccelBackward: {Value: {input: "AccelLeft"}},
+
+        GyroPitchUp: {Value: {input: "GyroYawRight"}},
+        GyroPitchDown: {Value: {input: "GyroYawLeft"}},
+        GyroRollLeft: {Value: {input: "GyroPitchDown"}},
+        GyroRollRight: {Value: {input: "GyroPitchUp"}},
+        GyroYawLeft: {Value: {input: "GyroRollLeft"}},
+        GyroYawRight: {Value: {input: "GyroRollRight"}},
+    }
+}
+
 export const CONTROLLER_KIND_LABELS: Record<ControllerKind, string> = {
     [ControllerKind.LeftJoyCon]: "Left Joy-Con",
     [ControllerKind.RightJoyCon]: "Right Joy-Con",

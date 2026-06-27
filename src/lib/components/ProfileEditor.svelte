@@ -5,12 +5,14 @@
     import {ProfileKind, PS4_OUTPUT_LABELS, XBOX360_OUTPUT_LABELS} from "../types";
     import ExpressionInput from "./ExpressionInput.svelte";
     import MappingModal from "./MappingModal.svelte";
+    import DefaultsWizardModal from "./DefaultsWizardModal.svelte";
 
     export let profileName: string | null = null;
     export let onBack: () => void;
 
     let mappingOutputKey: Output | null = null;
     let mappingLabel: string = "";
+    let showDefaultsModal = false;
 
     let profile: Profile = {
         name: "",
@@ -97,6 +99,14 @@
         }
         closeMappingModal();
     }
+
+    function handleDefaultsAccept(defaultProfile: Profile) {
+        if (!profile.name || profile.name.trim() === "") {
+            profile.name = defaultProfile.name;
+        }
+        profile.outputs = { ...defaultProfile.outputs };
+        showDefaultsModal = false;
+    }
 </script>
 
 <div class="editor-container">
@@ -109,6 +119,7 @@
                 <h2>{profileName ? "Edit Profile" : "New Profile"}</h2>
             </div>
             <div class="header-actions">
+                <button class="secondary" on:click={() => showDefaultsModal = true}>Set Defaults</button>
                 <button on:click={onBack}>Cancel</button>
                 <div class="save-wrapper">
                     {#if !canSave && profile.name.trim().length > 0}
@@ -182,6 +193,14 @@
                 initialCondition={profile.outputs[mappingOutputKey]}
                 onAccept={handleMappingAccept}
                 onCancel={closeMappingModal}
+        />
+    {/if}
+
+    {#if showDefaultsModal}
+        <DefaultsWizardModal
+                currentKind={profile.kind}
+                onAccept={handleDefaultsAccept}
+                onCancel={() => showDefaultsModal = false}
         />
     {/if}
 </div>
