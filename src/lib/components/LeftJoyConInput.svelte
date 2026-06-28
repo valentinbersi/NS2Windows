@@ -4,20 +4,22 @@
     export let inputs: Partial<Record<NsInput, number>> = {};
     $: isActive = (input: NsInput) => (inputs[input] || 0) > 0.5;
 
-    $: stickX = ((inputs.LeftXPlus || 0) + (inputs.LeftXMinus || 0)) * 10;
-    $: stickY = -(((inputs.LeftYMinus || 0) + (inputs.LeftYPlus || 0)) * 10);
+    $: stickX = ((inputs.LeftXPlus || 0) + -(inputs.LeftXMinus || 0)) * 10;
+    $: stickY = -((-(inputs.LeftYMinus || 0) + (inputs.LeftYPlus || 0)) * 10);
 </script>
 
 <div class="joycon-container">
     <!-- Top View -->
     <div class="view-label">Top</div>
-    <svg viewBox="0 0 60 30" width="60" height="30" class="top-view">
+    <svg class="top-view" height="30" viewBox="0 0 60 30" width="60">
         <!-- ZL (Back) -->
-        <rect x="15" y="2" width="35" height="12" rx="3" fill={isActive('Zl') ? 'var(--accent-color)' : '#444'} />
+        <rect fill={isActive('Zl') ? 'var(--accent-color)' : '#444'} height="12" rx="3" width="35" x="15" y="2"/>
         <!-- Body -->
-        <path d="M 0 30 L 0 20 Q 0 10 15 10 L 60 10 L 60 30 Z" fill="var(--bg-surface-hover)" stroke="var(--border-color)" stroke-width="2"/>
+        <path d="M 0 30 L 0 20 Q 0 10 15 10 L 60 10 L 60 30 Z" fill="var(--bg-surface-hover)"
+              stroke="var(--border-color)" stroke-width="2"/>
         <!-- L (Front) -->
-        <path d="M 0 20 Q 0 10 15 10 L 60 10 L 60 16 L 15 16 Q 5 16 5 20 Z" fill={isActive('L') ? 'var(--accent-color)' : '#444'} />
+        <path d="M 0 20 Q 0 10 15 10 L 60 10 L 60 16 L 15 16 Q 5 16 5 20 Z"
+              fill={isActive('L') ? 'var(--accent-color)' : '#444'}/>
     </svg>
 
     <div class="main-views">
