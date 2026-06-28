@@ -4,20 +4,22 @@
     export let inputs: Partial<Record<NsInput, number>> = {};
     $: isActive = (input: NsInput) => (inputs[input] || 0) > 0.5;
 
-    $: stickX = ((inputs.RightXPlus || 0) + (inputs.RightXMinus || 0)) * 10;
-    $: stickY = -(((inputs.RightYMinus || 0) + (inputs.RightYPlus || 0)) * 10);
+    $: stickX = ((inputs.RightXPlus || 0) + -(inputs.RightXMinus || 0)) * 10;
+    $: stickY = -((-(inputs.RightYMinus || 0) + (inputs.RightYPlus || 0)) * 10);
 </script>
 
 <div class="joycon-container">
     <!-- Top View -->
     <div class="view-label">Top</div>
-    <svg viewBox="0 0 60 30" width="60" height="30" class="top-view">
+    <svg class="top-view" height="30" viewBox="0 0 60 30" width="60">
         <!-- ZR (Back) -->
-        <rect x="10" y="2" width="35" height="12" rx="3" fill={isActive('Zr') ? 'var(--accent-color)' : '#444'} />
+        <rect fill={isActive('Zr') ? 'var(--accent-color)' : '#444'} height="12" rx="3" width="35" x="10" y="2"/>
         <!-- Body -->
-        <path d="M 0 10 L 45 10 Q 60 10 60 20 L 60 30 L 0 30 Z" fill="var(--bg-surface-hover)" stroke="var(--border-color)" stroke-width="2"/>
+        <path d="M 0 10 L 45 10 Q 60 10 60 20 L 60 30 L 0 30 Z" fill="var(--bg-surface-hover)"
+              stroke="var(--border-color)" stroke-width="2"/>
         <!-- R (Front) -->
-        <path d="M 0 10 L 45 10 Q 60 10 60 20 L 55 20 Q 55 16 45 16 L 0 16 Z" fill={isActive('R') ? 'var(--accent-color)' : '#444'} />
+        <path d="M 0 10 L 45 10 Q 60 10 60 20 L 55 20 Q 55 16 45 16 L 0 16 Z"
+              fill={isActive('R') ? 'var(--accent-color)' : '#444'}/>
     </svg>
 
     <div class="main-views">
@@ -61,9 +63,10 @@
                         r="10"/>
 
                 <!-- Home -->
-                <circle cx="20" cy="150" r="5" fill={isActive('Home') ? 'var(--accent-color)' : '#444'} />
+                <circle cx="20" cy="150" fill={isActive('Home') ? 'var(--accent-color)' : '#444'} r="5"/>
                 <!-- Chat (square, below home) -->
-                <rect x="16" y="162" width="8" height="8" rx="1" fill={isActive('Chat') ? 'var(--accent-color)' : '#444'} />
+                <rect fill={isActive('Chat') ? 'var(--accent-color)' : '#444'} height="8" rx="1" width="8" x="16"
+                      y="162"/>
             </svg>
         </div>
     </div>
