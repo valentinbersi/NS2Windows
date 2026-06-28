@@ -4,10 +4,10 @@
     export let inputs: Partial<Record<NsInput, number>> = {};
     $: isActive = (input: NsInput) => (inputs[input] || 0) > 0.5;
 
-    $: lStickX = ((inputs.LeftXPlus || 0) + (inputs.LeftXMinus || 0)) * 8;
-    $: lStickY = -(((inputs.LeftYMinus || 0) + (inputs.LeftYPlus || 0)) * 8);
-    $: cStickX = ((inputs.RightXPlus || 0) + (inputs.RightXMinus || 0)) * 8;
-    $: cStickY = -(((inputs.RightYMinus || 0) + (inputs.RightYPlus || 0)) * 8);
+    $: lStickX = ((inputs.LeftXPlus || 0) + -(inputs.LeftXMinus || 0)) * 8;
+    $: lStickY = -((-(inputs.LeftYMinus || 0) + (inputs.LeftYPlus || 0)) * 8);
+    $: cStickX = ((inputs.RightXPlus || 0) + -(inputs.RightXMinus || 0)) * 8;
+    $: cStickY = -((-(inputs.RightYMinus || 0) + (inputs.RightYPlus || 0)) * 8);
 
     $: lPressure = Math.max(0, Math.min(1, inputs.LTrigger || 0));
     $: rPressure = Math.max(0, Math.min(1, inputs.RTrigger || 0));
