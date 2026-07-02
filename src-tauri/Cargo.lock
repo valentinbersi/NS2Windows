@@ -3155,14 +3155,12 @@ dependencies = [
  "bitflags 2.11.1",
  "btleplug",
  "futures",
- "log",
  "maplit",
  "migration",
  "postcard",
  "sea-orm",
  "sea-orm-migration",
  "serde",
- "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-opener",
@@ -3170,7 +3168,6 @@ dependencies = [
  "tokio",
  "uuid",
  "vigem-rust",
- "windows 0.62.2",
 ]
 
 [[package]]
