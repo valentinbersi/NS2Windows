@@ -1,17 +1,21 @@
-use crate::connection::connected_device::ConnectedDevice;
-use btleplug::api::{Central, CentralEvent, ConnectionParameterPreset, Peripheral, ScanFilter};
-use btleplug::platform::Adapter;
+use crate::connection::connected_controller::ConnectedController;
+use crate::data::ns_controller_kind::NsControllerKind;
+use btleplug::api::{
+    Central, CentralEvent, Characteristic, ConnectionParameterPreset, Peripheral as PeripheralApi,
+    ScanFilter,
+};
+use btleplug::platform::{Adapter, Peripheral};
 use futures::StreamExt;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use std::sync::Arc;
 use std::time::Duration;
+use tokio::time::error::Elapsed;
 use tokio::time::timeout;
 use uuid::Uuid;
 
-const JOYCON_MANUFACTURER_ID: u16 = 1363; // Nintendo
-const JOYCON_MANUFACTURER_PREFIX: [u8; 4] = [0x01, 0x00, 0x03, 0x7E];
+const JOY_CON_MANUFACTURER_ID: u16 = 1363; // Nintendo
+const JOY_CON_MANUFACTURER_PREFIX: [u8; 4] = [0x01, 0x00, 0x03, 0x7E];
 
 #[derive(Clone, Debug)]
 pub struct BluetoothConnector {
@@ -43,45 +47,55 @@ impl From<btleplug::Error> for ConnectorError {
     }
 }
 
+impl From<Elapsed> for ConnectorError {
+    fn from(_: Elapsed) -> Self {
+        Self::TimeoutError
+    }
+}
+
+const COMMON_INPUT_UUID: &str = "ab7de9be-89fe-49ad-828f-118f09df7fd2";
+const LEFT_JOY_CON_INPUT_UUID: &str = "cc1bbbb5-7354-4d32-a716-a81cb241a32a";
+const RIGHT_JOY_CON_INPUT_UUID: &str = "d5a9e01e-2ffc-4cca-b20c-8b67142bf442";
+const PRO_CONTROLLER_INPUT_UUID: &str = "7492866c-ec3e-4619-8258-32755ffcc0f8";
+const NSO_GC_CONTROLLER_INPUT_UUID: &str = "8261cba1-9435-420c-84d6-f0c75a2c8e4d";
+
+struct Characteristics {
+    common_input: Characteristic,
+    unique_input: Characteristic,
+    output: Characteristic,
+}
+
 impl BluetoothConnector {
     pub fn new(adapter: Adapter) -> Self {
         Self { adapter }
     }
 
-    pub async fn wait_for_controller(&self) -> Result<ConnectedDevice, ConnectorError> {
-        // Start the scanner
-        self.adapter.start_scan(ScanFilter::default()).await?;
-
-        // Get the live stream of Bluetooth events from the OS
+    async fn scan_devices(&self) -> Result<Peripheral, ConnectorError> {
         let mut events = self.adapter.events().await?;
 
-        let scan_result = timeout(Duration::from_secs(30), async {
-            // 1. Quick Check: Is it already cached from a previous session?
+        timeout(Duration::from_secs(30), async {
             for peripheral in self.adapter.peripherals().await? {
                 if peripheral.is_connected().await.unwrap_or(false) {
                     continue;
                 }
 
                 if let Some(props) = peripheral.properties().await?
-                    && let Some(data) = props.manufacturer_data.get(&JOYCON_MANUFACTURER_ID)
-                    && data.starts_with(&JOYCON_MANUFACTURER_PREFIX)
+                    && let Some(data) = props.manufacturer_data.get(&JOY_CON_MANUFACTURER_ID)
+                    && data.starts_with(&JOY_CON_MANUFACTURER_PREFIX)
                 {
                     self.adapter.stop_scan().await?;
                     return Ok::<_, btleplug::Error>(peripheral);
                 }
             }
 
-            // 2. Event Loop: Wait for new beacons to arrive in real-time
             while let Some(event) = events.next().await {
-                // We only care about events related to device discovery or data updates
                 let id = match event {
                     CentralEvent::DeviceDiscovered(id) => id,
                     CentralEvent::DeviceUpdated(id) => id,
                     CentralEvent::ManufacturerDataAdvertisement { id, .. } => id,
-                    _ => continue, // Ignore disconnects, service data updates, etc.
+                    _ => continue,
                 };
 
-                // Fetch the specific peripheral that triggered the event
                 let peripheral = self.adapter.peripheral(&id).await?;
 
                 if peripheral.is_connected().await.unwrap_or(false) {
@@ -89,61 +103,129 @@ impl BluetoothConnector {
                 }
 
                 if let Some(props) = peripheral.properties().await?
-                    && let Some(data) = props.manufacturer_data.get(&JOYCON_MANUFACTURER_ID)
-                    && data.starts_with(&JOYCON_MANUFACTURER_PREFIX)
+                    && let Some(data) = props.manufacturer_data.get(&JOY_CON_MANUFACTURER_ID)
+                    && data.starts_with(&JOY_CON_MANUFACTURER_PREFIX)
                 {
                     self.adapter.stop_scan().await?;
                     return Ok(peripheral);
                 }
             }
 
-            // This is just a fallback in case the stream dies
             Err(btleplug::Error::Other(
                 "Event stream ended unexpectedly".into(),
             ))
         })
-        .await;
+        .await
+        .map_err(Into::into)
+        .map(|value| value.map_err(Into::into))
+        .flatten()
+    }
+
+    fn discover_characteristics(
+        &self,
+        controller: &Peripheral,
+    ) -> Result<(NsControllerKind, Characteristics), ConnectorError> {
+        let mut common_input = None;
+        let mut unique_input = None;
+        let mut controller_kind = None;
+        let mut output = None;
+
+        let common_input_uuid = Uuid::from_str(COMMON_INPUT_UUID).unwrap();
+        let left_joy_con_input_uuid = Uuid::from_str(LEFT_JOY_CON_INPUT_UUID).unwrap();
+        let right_joy_con_input_uuid = Uuid::from_str(RIGHT_JOY_CON_INPUT_UUID).unwrap();
+        let pro_controller_input_uuid = Uuid::from_str(PRO_CONTROLLER_INPUT_UUID).unwrap();
+        let nso_gc_controller_input_uuid = Uuid::from_str(NSO_GC_CONTROLLER_INPUT_UUID).unwrap();
+        let output_uuid = Uuid::from_str("649d4ac9-8eb7-4e6c-af44-1ea54fe5f005").unwrap();
+
+        for characteristic in controller.characteristics() {
+            if common_input.is_some() && unique_input.is_some() && output.is_some() {
+                break;
+            }
+
+            let uuid = characteristic.uuid;
+
+            // Get the common input characteristic
+            if uuid == common_input_uuid {
+                common_input = Some(characteristic);
+                continue;
+            }
+
+            // Get the output characteristic
+            if uuid == output_uuid {
+                output = Some(characteristic);
+                continue;
+            }
+
+            // Get the left joy con unique characteristic
+            if uuid == left_joy_con_input_uuid {
+                controller_kind = Some(NsControllerKind::LeftJoyCon);
+                unique_input = Some(characteristic);
+                continue;
+            }
+
+            // Get the right joy con unique characteristic
+            if uuid == right_joy_con_input_uuid {
+                controller_kind = Some(NsControllerKind::RightJoyCon);
+                unique_input = Some(characteristic);
+                continue;
+            }
+
+            // Get the pro controller unique characteristic
+            if uuid == pro_controller_input_uuid {
+                controller_kind = Some(NsControllerKind::ProController);
+                unique_input = Some(characteristic);
+                continue;
+            }
+
+            // Get the nso gc controller unique characteristic
+            if uuid == nso_gc_controller_input_uuid {
+                controller_kind = Some(NsControllerKind::NsoGcController);
+                unique_input = Some(characteristic);
+            }
+        }
+
+        let common_input = common_input.ok_or_else(|| ConnectorError::ConnectionError)?;
+        let unique_input = unique_input.ok_or_else(|| ConnectorError::ConnectionError)?;
+        let controller_kind = controller_kind.ok_or_else(|| ConnectorError::ConnectionError)?;
+        let output = output.ok_or_else(|| ConnectorError::ConnectionError)?;
+
+        Ok((
+            controller_kind,
+            Characteristics {
+                common_input,
+                unique_input,
+                output,
+            },
+        ))
+    }
+
+    pub async fn wait_for_controller(&self) -> Result<ConnectedController, ConnectorError> {
+        self.adapter.start_scan(ScanFilter::default()).await?;
+
+        let scan_result = self.scan_devices().await;
 
         self.adapter.stop_scan().await?;
         tokio::time::sleep(Duration::from_millis(200)).await;
 
-        // Match the result exactly as before
-        let device = match scan_result {
-            Ok(Ok(peripheral)) => peripheral,
-            _ => return Err(ConnectorError::TimeoutError),
-        };
+        let controller = scan_result?;
 
-        device.connect().await?;
-        device.discover_services().await?;
+        controller.connect().await?;
+        controller.discover_services().await?;
 
-        let mut input_char = None;
-        let mut write_char = None;
+        let (controller_kind, characteristics) = self.discover_characteristics(&controller)?;
 
-        let input_report = Uuid::from_str("ab7de9be-89fe-49ad-828f-118f09df7fd2").unwrap();
-        let write_command = Uuid::from_str("649d4ac9-8eb7-4e6c-af44-1ea54fe5f005").unwrap();
-
-        for characteristic in device.characteristics() {
-            if characteristic.uuid == input_report {
-                input_char = Some(characteristic);
-                continue;
-            }
-
-            if characteristic.uuid == write_command {
-                write_char = Some(characteristic)
-            }
-        }
-
-        let input_char = input_char.ok_or_else(|| ConnectorError::ConnectionError)?;
-        let write_char = write_char.ok_or_else(|| ConnectorError::ConnectionError)?;
-
-        device
+        controller
             .request_connection_parameters(ConnectionParameterPreset::ThroughputOptimized)
             .await?;
 
-        Ok(ConnectedDevice {
-            peripheral: device,
-            input_char: Arc::new(input_char),
-            write_char: Arc::new(write_char),
-        })
+        let connected_controller = ConnectedController::new(
+            controller,
+            characteristics.common_input,
+            characteristics.unique_input,
+            characteristics.output,
+            controller_kind,
+        );
+
+        Ok(connected_controller)
     }
 }
