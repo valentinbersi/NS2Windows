@@ -342,11 +342,6 @@
         font-weight: 500;
     }
 
-    .device-btn span {
-        font-weight: 500;
-        font-size: 14px;
-    }
-
     .modal-actions {
         display: flex;
         justify-content: center;

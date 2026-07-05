@@ -410,7 +410,7 @@ impl Decoder {
 
     fn decode_motion(&self, common_buffer: &[u8]) -> HashMap<NsInput, f32> {
         const MOTION_BYTES: Range<usize> = 0x30..0x30 + 0xC;
-        const ACCEL_X_BYTES: Range<usize> = 0x0..0x0 + 0x2;
+        const ACCEL_X_BYTES: Range<usize> = 0x0..0x2;
         const ACCEL_Y_BYTES: Range<usize> = 0x2..0x2 + 0x2;
         const ACCEL_Z_BYTES: Range<usize> = 0x4..0x4 + 0x2;
         const GYRO_X_BYTES: Range<usize> = 0x6..0x6 + 0x2;
