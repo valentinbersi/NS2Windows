@@ -1,3 +1,4 @@
+use crate::connection::connected_controller::ConnectedController;
 use crate::data::ns_controller_kind::NsControllerKind;
 use crate::data::output_data::OutputData;
 use crate::data::profile_kind::ProfileKind;
@@ -6,6 +7,7 @@ use crate::dtos::emulated_controller::EmulatedController;
 use crate::dtos::motion_source::MotionSource;
 use crate::dtos::ns_connected_controller::{DualJoyCon, NsConnectedController, SingleController};
 use crate::encode::ds4_encoder::Ds4Encoder;
+use crate::encode::rumble_encoder::RumbleEncoder;
 use crate::encode::xbox_encoder::XboxEncoder;
 use crate::evaluation::evaluator::Evaluator;
 use crate::profiles::profile::Profile;
@@ -14,24 +16,50 @@ use crate::state::emulated_controller_task::EmulatedControllerTask;
 use btleplug::api::Peripheral as PeripheralApi;
 use btleplug::platform::Peripheral;
 use futures::StreamExt;
-use std::sync::atomic::{AtomicU16, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU16, Ordering};
 use std::time::Duration;
-use tauri::async_runtime::JoinHandle;
 use tauri::State;
+use tauri::async_runtime::JoinHandle;
 use tokio::sync::watch;
 use tokio::sync::watch::{Receiver, Sender};
 use tokio::time;
-use tokio::time::Interval;
+use tokio::time::{Interval, MissedTickBehavior};
 use uuid::Uuid;
 use vigem_rust::client::ClientError;
 use vigem_rust::target::{DualShock4, Xbox360};
-use vigem_rust::TargetHandle;
+use vigem_rust::{Ds4Notification, TargetHandle, X360Notification};
+
+const RUMBLE_REFRESH_INTERVAL: Duration = Duration::from_millis(8);
 
 #[derive(Clone)]
 enum VirtualController {
     Xbox360(TargetHandle<Xbox360>),
     DualShock4(TargetHandle<DualShock4>),
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+struct RumbleFeedback {
+    large: u8,
+    small: u8,
+}
+
+impl From<X360Notification> for RumbleFeedback {
+    fn from(value: X360Notification) -> Self {
+        Self {
+            large: value.large_motor,
+            small: value.small_motor,
+        }
+    }
+}
+
+impl From<Ds4Notification> for RumbleFeedback {
+    fn from(value: Ds4Notification) -> Self {
+        Self {
+            large: value.large_motor,
+            small: value.small_motor,
+        }
+    }
 }
 
 impl VirtualController {
@@ -57,6 +85,107 @@ impl VirtualController {
             }
         }
     }
+
+    fn start_feedback_bridge(&self) -> Result<Receiver<RumbleFeedback>, ClientError> {
+        fn send_notifications<T, E>(
+            sender: Sender<RumbleFeedback>,
+            notifications: std::sync::mpsc::Receiver<Result<T, E>>,
+        ) where
+            T: Into<RumbleFeedback> + Send + 'static,
+            E: Send + 'static,
+        {
+            std::thread::spawn(move || {
+                while let Ok(Ok(notification)) = notifications.recv() {
+                    let _ = sender.send(notification.into());
+                }
+            });
+        }
+
+        let (sender, receiver) = watch::channel(RumbleFeedback::default());
+
+        match self {
+            VirtualController::Xbox360(target) => {
+                let notifications = target.register_notification()?;
+                send_notifications(sender, notifications);
+            }
+
+            VirtualController::DualShock4(target) => {
+                let notifications = target.register_notification()?;
+                send_notifications(sender, notifications);
+            }
+        };
+
+        Ok(receiver)
+    }
+}
+
+fn start_rumble_forwarding(
+    virtual_controller: &VirtualController,
+    mut devices: Vec<ConnectedController>,
+) -> Result<JoinHandle<()>, String> {
+    // NSO GameCube rumble is intentionally disabled until its output format is verified.
+    // Do not subscribe to ViGEm feedback or write to either GC output characteristic.
+    devices.retain(|device| device.kind() != NsControllerKind::NsoGcController);
+
+    if devices.is_empty() {
+        return Ok(tauri::async_runtime::spawn(std::future::pending()));
+    }
+
+    let mut feedback = virtual_controller
+        .start_feedback_bridge()
+        .map_err(|error| error.to_string())?;
+
+    Ok(tauri::async_runtime::spawn(async move {
+        let mut interval = tokio::time::interval(RUMBLE_REFRESH_INTERVAL);
+        interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
+        interval.tick().await;
+
+        let mut outputs = devices
+            .into_iter()
+            .map(|device| (device, RumbleEncoder::default()))
+            .collect::<Vec<_>>();
+
+        let mut amplitude = 0;
+
+        loop {
+            tokio::select! {
+                biased;
+
+                changed = feedback.changed() => {
+                    if changed.is_err() {
+                        break;
+                    }
+
+                    let next_feedback = *feedback.borrow_and_update();
+                    let next_amplitude = next_feedback.large.max(next_feedback.small);
+
+                    if next_amplitude == amplitude {
+                        continue;
+                    }
+
+                    amplitude = next_amplitude;
+
+                    for (device, encoder) in &mut outputs {
+                        let packet = encoder.packet(device.kind(), amplitude);
+
+                        if let Err(error) = device.write_rumble(&packet).await {
+                            eprintln!("Failed to update rumble: {error}");
+                        }
+                    }
+                }
+
+                _ = interval.tick(), if amplitude != 0 => {
+                    for (device, encoder) in &mut outputs {
+                        let packet = encoder.packet(device.kind(), amplitude);
+
+                        if let Err(error) = device.write_rumble(&packet).await {
+                            eprintln!("Failed to refresh rumble: {error}");
+                        }
+                    }
+                }
+            }
+        }
+    }))
 }
 
 async fn start_input_listening(
@@ -164,6 +293,8 @@ async fn start_single_controller(
     let input_listener =
         start_input_listening(device.controller(), device.input_uuid(), sender).await?;
 
+    let rumble_output = start_rumble_forwarding(&virtual_controller, vec![device.clone()])?;
+
     let output_emulator = start_single_controller_emulation(
         &state,
         device.kind(),
@@ -172,7 +303,11 @@ async fn start_single_controller(
         receiver,
     );
 
-    let task = EmulatedControllerTask::new_single_controller(input_listener, output_emulator);
+    let task = EmulatedControllerTask::new_single_controller(
+        input_listener,
+        output_emulator,
+        rumble_output,
+    );
 
     let id = Uuid::now_v7();
 
@@ -254,6 +389,11 @@ async fn start_dual_joy_con(
     )
     .await?;
 
+    let rumble_output = start_rumble_forwarding(
+        &virtual_controller,
+        vec![left_device.clone(), right_device.clone()],
+    )?;
+
     let output_emulator = start_dual_joy_con_emulation(
         &state,
         profile,
@@ -268,6 +408,7 @@ async fn start_dual_joy_con(
         left_input_listener,
         right_input_listener,
         output_emulator,
+        rumble_output,
     );
 
     state.insert_emulated_controller(id, task).await;

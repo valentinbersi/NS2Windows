@@ -8,6 +8,8 @@ pub struct ConnectedController {
     controller: Peripheral,
     input: Characteristic,
     output: Characteristic,
+    rumble_output: Characteristic,
+    combined_output: Characteristic,
     kind: NsControllerKind,
 }
 
@@ -16,12 +18,16 @@ impl ConnectedController {
         controller: Peripheral,
         input: Characteristic,
         output: Characteristic,
+        rumble_output: Characteristic,
+        combined_output: Characteristic,
         kind: NsControllerKind,
     ) -> Self {
         Self {
             controller,
             input,
             output,
+            rumble_output,
+            combined_output,
             kind,
         }
     }
@@ -32,6 +38,18 @@ impl ConnectedController {
 
     pub async fn write(&self, cmd: &[u8], write_type: WriteType) -> btleplug::Result<()> {
         self.controller.write(&self.output, cmd, write_type).await
+    }
+
+    pub async fn write_rumble(&self, cmd: &[u8]) -> btleplug::Result<()> {
+        self.controller
+            .write(&self.rumble_output, cmd, WriteType::WithoutResponse)
+            .await
+    }
+
+    pub async fn write_combined_output(&self, cmd: &[u8]) -> btleplug::Result<()> {
+        self.controller
+            .write(&self.combined_output, cmd, WriteType::WithoutResponse)
+            .await
     }
 
     pub fn controller(&self) -> Peripheral {
