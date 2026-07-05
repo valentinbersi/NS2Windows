@@ -7,15 +7,15 @@ use crate::state::ns_controller::NsController;
 use btleplug::api::Peripheral as PeripheralApi;
 use btleplug::platform::Peripheral;
 use futures::StreamExt;
-use std::sync::atomic::{AtomicU16, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU16, Ordering};
 use std::time::Duration;
 use tauri::async_runtime::JoinHandle;
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::watch;
 use tokio::sync::watch::{Receiver, Sender};
 use tokio::time;
-use tokio::time::{sleep, Interval};
+use tokio::time::{Interval, sleep};
 use uuid::Uuid;
 
 async fn wait_and_connect(
@@ -53,7 +53,19 @@ async fn configure_connection(
 
     state
         .communicator
-        .send_custom_command(&controller)
+        .set_feature_mask(controller)
+        .await
+        .map_err(|err| err.to_string())?;
+
+    state
+        .communicator
+        .initialize_rumble(controller)
+        .await
+        .map_err(|err| err.to_string())?;
+
+    state
+        .communicator
+        .enable_features(controller)
         .await
         .map_err(|err| err.to_string())?;
 
@@ -62,14 +74,14 @@ async fn configure_connection(
     // Set controller led to ■□□□
     state
         .communicator
-        .set_device_led(&controller, LedPatten::Led1)
+        .set_device_led(controller, LedPatten::Led1)
         .await
         .map_err(|err| err.to_string())?;
 
     // Make the controller emit a sound
     state
         .communicator
-        .emit_sound(&controller)
+        .emit_sound(controller)
         .await
         .map_err(|err| err.to_string())
 }
