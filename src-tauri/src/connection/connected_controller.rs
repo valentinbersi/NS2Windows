@@ -6,8 +6,7 @@ use uuid::Uuid;
 #[derive(Clone, Debug)]
 pub struct ConnectedController {
     controller: Peripheral,
-    common_input: Characteristic,
-    unique_input: Characteristic,
+    input: Characteristic,
     output: Characteristic,
     kind: NsControllerKind,
 }
@@ -15,23 +14,20 @@ pub struct ConnectedController {
 impl ConnectedController {
     pub fn new(
         controller: Peripheral,
-        common_input: Characteristic,
-        unique_input: Characteristic,
+        input: Characteristic,
         output: Characteristic,
         kind: NsControllerKind,
     ) -> Self {
         Self {
             controller,
-            common_input,
-            unique_input,
+            input,
             output,
             kind,
         }
     }
 
-    pub async fn suscribe_inputs(&self) -> btleplug::Result<()> {
-        self.controller.subscribe(&self.common_input).await?;
-        self.controller.subscribe(&self.unique_input).await
+    pub async fn suscribe_input(&self) -> btleplug::Result<()> {
+        self.controller.subscribe(&self.input).await
     }
 
     pub async fn write(&self, cmd: &[u8], write_type: WriteType) -> btleplug::Result<()> {
@@ -42,12 +38,8 @@ impl ConnectedController {
         self.controller.clone()
     }
 
-    pub fn common_input_uuid(&self) -> Uuid {
-        self.common_input.uuid
-    }
-
-    pub fn unique_input_uuid(&self) -> Uuid {
-        self.unique_input.uuid
+    pub fn input_uuid(&self) -> Uuid {
+        self.input.uuid
     }
 
     pub fn kind(&self) -> NsControllerKind {

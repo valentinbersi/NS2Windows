@@ -1,90 +1,137 @@
 use crate::data::input_data::InputData;
 use crate::data::ns_input::NsInput;
 use crate::dtos::motion_source::MotionSource;
-use bitflags::{Flags, bitflags};
+use bitflags::{bitflags, Flags};
 use maplit::hashmap;
 use std::collections::HashMap;
 use std::ops::{BitAnd, Range};
 
 bitflags! {
     #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-    struct LeftJoyConButtons: u16 {
-        const Capture = 0x00_01;
-        const Sr = 0x00_40;
-        const Sl = 0x00_80;
-        const Down = 0x01_00;
-        const Right = 0x02_00;
-        const Left = 0x04_00;
-        const Up = 0x08_00;
-        const L = 0x10_00;
-        const Zl = 0x20_00;
-        const Minus = 0x40_00;
-        const Stick = 0x80_00;
+    struct Switch2ControllerButtons: u32 {
+        const Gr = 0x00_00_00_01;
+        const Gl = 0x00_00_00_02;
+
+        const Unused1 = 0x00_00_00_04;
+        const Unused2 = 0x00_00_00_08;
+
+        const Headset = 0x00_00_00_10;
+
+        const Unused3 = 0x00_00_00_20;
+        const Unused4 = 0x00_00_00_40;
+        const Unused5 = 0x00_00_00_80;
+
+        const Down = 0x00_00_01_00;
+        const Up = 0x00_00_02_00;
+        const Right = 0x00_00_04_00;
+        const Left = 0x00_00_08_00;
+
+        const SrLeft = 0x00_00_10_00;
+        const SlLeft = 0x00_00_20_00;
+        const L = 0x00_00_40_00;
+        const Zl = 0x00_00_80_00;
+
+        const Minus = 0x00_01_00_00;
+        const Plus = 0x00_02_00_00;
+
+        const RightStick = 0x00_04_00_00;
+        const LeftStick = 0x00_08_00_00;
+
+        const Home = 0x00_10_00_00;
+        const Capture = 0x00_20_00_00;
+        const C = 0x00_40_00_00;
+
+        const Unused6 = 0x00_80_00_00;
+
+        const Y = 0x01_00_00_00;
+        const X = 0x02_00_00_00;
+        const B = 0x04_00_00_00;
+        const A = 0x08_00_00_00;
+
+        const SrRight = 0x10_00_00_00;
+        const SlRight = 0x20_00_00_00;
+        const R = 0x40_00_00_00;
+        const Zr = 0x80_00_00_00;
     }
 
-    #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-    struct RightJoyConButtons: u16 {
-        const Home = 0x00_01;
-        const C = 0x00_10;
-        const Sr = 0x00_40;
-        const Sl = 0x00_80;
-        const B = 0x01_00;
-        const A = 0x02_00;
-        const Y = 0x04_00;
-        const X = 0x08_00;
-        const R = 0x10_00;
-        const Zr = 0x20_00;
-        const Plus = 0x40_00;
-        const Stick = 0x80_00;
-    }
-
-    #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-    struct ProControllerButtons: u32 {
-        const Home = 0x00_00_01;
-        const Capture = 0x00_00_02;
-        const Gr = 0x00_00_04;
-        const Gl = 0x00_00_08;
-        const C = 0x00_00_10;
-        const Down = 0x00_01_00;
-        const Right = 0x00_02_00;
-        const Left = 0x00_04_00;
-        const Up = 0x00_08_00;
-        const L = 0x00_10_00;
-        const Zl = 0x00_20_00;
-        const Minus = 0x00_40_00;
-        const LeftStick = 0x00_80_00;
-        const B = 0x01_00_00;
-        const A = 0x02_00_00;
-        const Y = 0x04_00_00;
-        const X = 0x08_00_00;
-        const R = 0x10_00_00;
-        const Zr = 0x20_00_00;
-        const Plus = 0x40_00_00;
-        const RightStick = 0x80_00_00;
-    }
-
-    #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-    struct NsoGcControllerButtons: u32 {
-        const Home = 0x00_00_01;
-        const Capture = 0x00_00_02;
-        const C = 0x00_00_10;
-        const Down = 0x00_01_00;
-        const Right = 0x00_02_00;
-        const Left = 0x00_04_00;
-        const Up = 0x00_08_00;
-        const L = 0x00_10_00;
-        const Zl = 0x00_20_00;
-        const Minus = 0x00_40_00;
-        const LeftStick = 0x00_80_00;
-        const B = 0x01_00_00;
-        const A = 0x02_00_00;
-        const Y = 0x04_00_00;
-        const X = 0x08_00_00;
-        const R = 0x10_00_00;
-        const Zr = 0x20_00_00;
-        const Plus = 0x40_00_00;
-        const RightStick = 0x80_00_00;
-    }
+    // #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    // struct LeftJoyConButtons: u16 {
+    //     const Capture = 0x00_01;
+    //     const Sr = 0x00_40;
+    //     const Sl = 0x00_80;
+    //     const Down = 0x01_00;
+    //     const Right = 0x02_00;
+    //     const Left = 0x04_00;
+    //     const Up = 0x08_00;
+    //     const L = 0x10_00;
+    //     const Zl = 0x20_00;
+    //     const Minus = 0x40_00;
+    //     const Stick = 0x80_00;
+    // }
+    //
+    // #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    // struct RightJoyConButtons: u16 {
+    //     const Home = 0x00_01;
+    //     const C = 0x00_10;
+    //     const Sr = 0x00_40;
+    //     const Sl = 0x00_80;
+    //     const B = 0x01_00;
+    //     const A = 0x02_00;
+    //     const Y = 0x04_00;
+    //     const X = 0x08_00;
+    //     const R = 0x10_00;
+    //     const Zr = 0x20_00;
+    //     const Plus = 0x40_00;
+    //     const Stick = 0x80_00;
+    // }
+    //
+    // #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    // struct ProControllerButtons: u32 {
+    //     const Home = 0x00_00_01;
+    //     const Capture = 0x00_00_02;
+    //     const Gr = 0x00_00_04;
+    //     const Gl = 0x00_00_08;
+    //     const C = 0x00_00_10;
+    //     const Down = 0x00_01_00;
+    //     const Right = 0x00_02_00;
+    //     const Left = 0x00_04_00;
+    //     const Up = 0x00_08_00;
+    //     const L = 0x00_10_00;
+    //     const Zl = 0x00_20_00;
+    //     const Minus = 0x00_40_00;
+    //     const LeftStick = 0x00_80_00;
+    //     const B = 0x01_00_00;
+    //     const A = 0x02_00_00;
+    //     const Y = 0x04_00_00;
+    //     const X = 0x08_00_00;
+    //     const R = 0x10_00_00;
+    //     const Zr = 0x20_00_00;
+    //     const Plus = 0x40_00_00;
+    //     const RightStick = 0x80_00_00;
+    // }
+    //
+    // #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    // struct NsoGcControllerButtons: u32 {
+    //     const Home = 0x00_00_01;
+    //     const Capture = 0x00_00_02;
+    //     const C = 0x00_00_10;
+    //     const Down = 0x00_01_00;
+    //     const Right = 0x00_02_00;
+    //     const Left = 0x00_04_00;
+    //     const Up = 0x00_08_00;
+    //     const L = 0x00_10_00;
+    //     const Zl = 0x00_20_00;
+    //     const Minus = 0x00_40_00;
+    //     const LeftStick = 0x00_80_00;
+    //     const B = 0x01_00_00;
+    //     const A = 0x02_00_00;
+    //     const Y = 0x04_00_00;
+    //     const X = 0x08_00_00;
+    //     const R = 0x10_00_00;
+    //     const Zr = 0x20_00_00;
+    //     const Plus = 0x40_00_00;
+    //     const RightStick = 0x80_00_00;
+    // }
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -99,11 +146,7 @@ struct StickData {
 impl Decoder {
     // ------------ joystick decoding ------------
 
-    fn decode_joystick(&self, buffer: &[u8]) -> StickData {
-        if buffer.len() < 3 {
-            return StickData { x: 0_f32, y: 0_f32 };
-        }
-
+    fn decode_stick(&self, buffer: &[u8]) -> StickData {
         let x = (u16::from_le_bytes([buffer[0], buffer[1]]) & 0x0FFF) as i32;
         let y = (u16::from_le_bytes([buffer[1], buffer[2]]) >> 4) as i32;
 
@@ -121,41 +164,79 @@ impl Decoder {
         StickData { x, y }
     }
 
-    fn decode_joy_con_stick(&self, unique_buffer: &[u8]) -> HashMap<NsInput, f32> {
-        const JOY_CON_STICK_BYTES: Range<usize> = 0x5..0x5 + 0x3;
+    fn decode_left_stick(&self, buffer: &[u8]) -> HashMap<NsInput, f32> {
+        const LEFT_STICK_BYTES: Range<usize> = 0xA..0xA + 0x3;
 
-        let analog_stick = &unique_buffer[JOY_CON_STICK_BYTES];
-        let stick = self.decode_joystick(analog_stick);
+        let analog_stick = &buffer[LEFT_STICK_BYTES];
+        let stick = self.decode_stick(analog_stick);
+
+        let x_minus = -stick.x.clamp(-1_f32, 0_f32);
+        let x_plus = stick.x.clamp(0_f32, 1_f32);
+        let y_minus = -stick.y.clamp(-1_f32, 0_f32);
+        let y_plus = stick.y.clamp(0_f32, 1_f32);
+
         hashmap! {
-            NsInput::LeftXMinus => -stick.x.clamp(-1_f32, 0_f32),
-            NsInput::LeftXPlus => stick.x.clamp(0_f32, 1_f32),
-            NsInput::LeftYMinus => -stick.y.clamp(-1_f32, 0_f32),
-            NsInput::LeftYPlus => stick.y.clamp(0_f32, 1_f32),
+            NsInput::LeftXMinus => x_minus,
+            NsInput::LeftXPlus => x_plus,
+            NsInput::LeftYMinus => y_minus,
+            NsInput::LeftYPlus => y_plus,
         }
     }
 
-    fn decode_controller_stick(&self, unique_buffer: &[u8]) -> HashMap<NsInput, f32> {
-        const CONTROLLER_LEFT_STICK_BYTES: Range<usize> = 0x5..0x5 + 0x3;
-        const CONTROLLER_RIGHT_STICK_BYTES: Range<usize> = 0x8..0x8 + 0x3;
+    fn decode_right_stick(&self, buffer: &[u8]) -> HashMap<NsInput, f32> {
+        const RIGHT_STICK_BYTES: Range<usize> = 0xD..0xD + 0x3;
 
-        let left_analog_stick = &unique_buffer[CONTROLLER_LEFT_STICK_BYTES];
-        let left_stick = self.decode_joystick(left_analog_stick);
+        let analog_stick = &buffer[RIGHT_STICK_BYTES];
+        let stick = self.decode_stick(analog_stick);
 
-        let right_analog_stick = &unique_buffer[CONTROLLER_RIGHT_STICK_BYTES];
-        let right_stick = self.decode_joystick(right_analog_stick);
+        let x_minus = -stick.x.clamp(-1_f32, 0_f32);
+        let x_plus = stick.x.clamp(0_f32, 1_f32);
+        let y_minus = -stick.y.clamp(-1_f32, 0_f32);
+        let y_plus = stick.y.clamp(0_f32, 1_f32);
 
         hashmap! {
-            NsInput::LeftXMinus => -left_stick.x.clamp(-1_f32, 0_f32),
-            NsInput::LeftXPlus => left_stick.x.clamp(0_f32, 1_f32),
-            NsInput::LeftYMinus => -left_stick.y.clamp(-1_f32, 0_f32),
-            NsInput::LeftYPlus => left_stick.y.clamp(0_f32, 1_f32),
-
-            NsInput::RightXMinus => -right_stick.x.clamp(-1_f32, 0_f32),
-            NsInput::RightXPlus => right_stick.x.clamp(0_f32, 1_f32),
-            NsInput::RightYMinus => -right_stick.y.clamp(-1_f32, 0_f32),
-            NsInput::RightYPlus => right_stick.y.clamp(0_f32, 1_f32),
+            NsInput::RightXMinus => x_minus,
+            NsInput::RightXPlus => x_plus,
+            NsInput::RightYMinus => y_minus,
+            NsInput::RightYPlus => y_plus,
         }
     }
+
+    // fn decode_joy_con_stick(&self, unique_buffer: &[u8]) -> HashMap<NsInput, f32> {
+    //     const JOY_CON_STICK_BYTES: Range<usize> = 0x5..0x5 + 0x3;
+    //
+    //     let analog_stick = &unique_buffer[JOY_CON_STICK_BYTES];
+    //     let stick = self.decode_stick(analog_stick);
+    //     hashmap! {
+    //         NsInput::LeftXMinus => -stick.x.clamp(-1_f32, 0_f32),
+    //         NsInput::LeftXPlus => stick.x.clamp(0_f32, 1_f32),
+    //         NsInput::LeftYMinus => -stick.y.clamp(-1_f32, 0_f32),
+    //         NsInput::LeftYPlus => stick.y.clamp(0_f32, 1_f32),
+    //     }
+    // }
+    //
+    // fn decode_controller_stick(&self, unique_buffer: &[u8]) -> HashMap<NsInput, f32> {
+    //     const CONTROLLER_LEFT_STICK_BYTES: Range<usize> = 0x5..0x5 + 0x3;
+    //     const CONTROLLER_RIGHT_STICK_BYTES: Range<usize> = 0x8..0x8 + 0x3;
+    //
+    //     let left_analog_stick = &unique_buffer[CONTROLLER_LEFT_STICK_BYTES];
+    //     let left_stick = self.decode_stick(left_analog_stick);
+    //
+    //     let right_analog_stick = &unique_buffer[CONTROLLER_RIGHT_STICK_BYTES];
+    //     let right_stick = self.decode_stick(right_analog_stick);
+    //
+    //     hashmap! {
+    //         NsInput::LeftXMinus => -left_stick.x.clamp(-1_f32, 0_f32),
+    //         NsInput::LeftXPlus => left_stick.x.clamp(0_f32, 1_f32),
+    //         NsInput::LeftYMinus => -left_stick.y.clamp(-1_f32, 0_f32),
+    //         NsInput::LeftYPlus => left_stick.y.clamp(0_f32, 1_f32),
+    //
+    //         NsInput::RightXMinus => -right_stick.x.clamp(-1_f32, 0_f32),
+    //         NsInput::RightXPlus => right_stick.x.clamp(0_f32, 1_f32),
+    //         NsInput::RightYMinus => -right_stick.y.clamp(-1_f32, 0_f32),
+    //         NsInput::RightYPlus => right_stick.y.clamp(0_f32, 1_f32),
+    //     }
+    // }
 
     // ------------ buttons decoding ------------
 
@@ -167,143 +248,135 @@ impl Decoder {
         }
     }
 
-    const JOY_CON_BUTTONS_BYTES: Range<usize> = 0x2..0x2 + 0x2;
+    const BUTTONS_BYTES: Range<usize> = 0x4..0x4 + 0x4;
 
-    fn decode_left_joy_con_buttons(&self, unique_buffer: &[u8]) -> HashMap<NsInput, f32> {
-        let buttons_buffer = &unique_buffer[Self::JOY_CON_BUTTONS_BYTES];
+    fn decode_left_joy_con_buttons(&self, buffer: &[u8]) -> HashMap<NsInput, f32> {
+        let buttons_buffer = &buffer[Self::BUTTONS_BYTES];
         let buttons_buffer = buttons_buffer.try_into().unwrap();
 
-        let buttons_bit_field = u16::from_le_bytes(buttons_buffer);
-        let buttons = LeftJoyConButtons::from_bits(buttons_bit_field).unwrap();
+        let buttons_bit_field = u32::from_be_bytes(buttons_buffer);
+        let buttons = Switch2ControllerButtons::from_bits(buttons_bit_field).unwrap();
 
         hashmap! {
-            NsInput::Capture => Self::value_from_flags(buttons, LeftJoyConButtons::Capture),
+            NsInput::Capture => Self::value_from_flags(buttons, Switch2ControllerButtons::Capture),
 
-            NsInput::Sr => Self::value_from_flags(buttons, LeftJoyConButtons::Sr),
-            NsInput::Sl => Self::value_from_flags(buttons, LeftJoyConButtons::Sl),
+            NsInput::Sr => Self::value_from_flags(buttons, Switch2ControllerButtons::SrLeft),
+            NsInput::Sl => Self::value_from_flags(buttons, Switch2ControllerButtons::SlLeft),
 
-            NsInput::Down => Self::value_from_flags(buttons, LeftJoyConButtons::Down),
-            NsInput::Right => Self::value_from_flags(buttons, LeftJoyConButtons::Right),
-            NsInput::Left => Self::value_from_flags(buttons, LeftJoyConButtons::Left),
-            NsInput::Up => Self::value_from_flags(buttons, LeftJoyConButtons::Up),
+            NsInput::Down => Self::value_from_flags(buttons, Switch2ControllerButtons::Down),
+            NsInput::Right => Self::value_from_flags(buttons, Switch2ControllerButtons::Right),
+            NsInput::Left => Self::value_from_flags(buttons, Switch2ControllerButtons::Left),
+            NsInput::Up => Self::value_from_flags(buttons, Switch2ControllerButtons::Up),
 
-            NsInput::L => Self::value_from_flags(buttons, LeftJoyConButtons::L),
-            NsInput::Zl => Self::value_from_flags(buttons, LeftJoyConButtons::Zl),
+            NsInput::L => Self::value_from_flags(buttons, Switch2ControllerButtons::L),
+            NsInput::Zl => Self::value_from_flags(buttons, Switch2ControllerButtons::Zl),
 
-            NsInput::Minus => Self::value_from_flags(buttons, LeftJoyConButtons::Minus),
+            NsInput::Minus => Self::value_from_flags(buttons, Switch2ControllerButtons::Minus),
 
-            NsInput::Tl => Self::value_from_flags(buttons, LeftJoyConButtons::Stick),
+            NsInput::Tl => Self::value_from_flags(buttons, Switch2ControllerButtons::LeftStick),
         }
     }
 
-    fn decode_right_joy_con_buttons(&self, unique_buffer: &[u8]) -> HashMap<NsInput, f32> {
-        let buttons_buffer = &unique_buffer[Self::JOY_CON_BUTTONS_BYTES];
+    fn decode_right_joy_con_buttons(&self, buffer: &[u8]) -> HashMap<NsInput, f32> {
+        let buttons_buffer = &buffer[Self::BUTTONS_BYTES];
         let buttons_buffer = buttons_buffer.try_into().unwrap();
 
-        let buttons_bit_field = u16::from_le_bytes(buttons_buffer);
-        let buttons = RightJoyConButtons::from_bits(buttons_bit_field).unwrap();
+        let buttons_bit_field = u32::from_be_bytes(buttons_buffer);
+        let buttons = Switch2ControllerButtons::from_bits(buttons_bit_field).unwrap();
 
         hashmap! {
-            NsInput::Home => Self::value_from_flags(buttons, RightJoyConButtons::Home),
-            NsInput::Chat => Self::value_from_flags(buttons, RightJoyConButtons::C),
+            NsInput::Home => Self::value_from_flags(buttons, Switch2ControllerButtons::Home),
+            NsInput::Chat => Self::value_from_flags(buttons, Switch2ControllerButtons::C),
 
-            NsInput::Sr => Self::value_from_flags(buttons, RightJoyConButtons::Sr),
-            NsInput::Sl => Self::value_from_flags(buttons, RightJoyConButtons::Sl),
+            NsInput::Sr => Self::value_from_flags(buttons, Switch2ControllerButtons::SrRight),
+            NsInput::Sl => Self::value_from_flags(buttons, Switch2ControllerButtons::SlRight),
 
-            NsInput::B => Self::value_from_flags(buttons, RightJoyConButtons::B),
-            NsInput::A => Self::value_from_flags(buttons, RightJoyConButtons::A),
-            NsInput::Y => Self::value_from_flags(buttons, RightJoyConButtons::Y),
-            NsInput::X => Self::value_from_flags(buttons, RightJoyConButtons::X),
+            NsInput::B => Self::value_from_flags(buttons, Switch2ControllerButtons::B),
+            NsInput::A => Self::value_from_flags(buttons, Switch2ControllerButtons::A),
+            NsInput::Y => Self::value_from_flags(buttons, Switch2ControllerButtons::Y),
+            NsInput::X => Self::value_from_flags(buttons, Switch2ControllerButtons::X),
 
-            NsInput::R => Self::value_from_flags(buttons, RightJoyConButtons::R),
-            NsInput::Zr => Self::value_from_flags(buttons, RightJoyConButtons::Zr),
+            NsInput::R => Self::value_from_flags(buttons, Switch2ControllerButtons::R),
+            NsInput::Zr => Self::value_from_flags(buttons, Switch2ControllerButtons::Zr),
 
-            NsInput::Plus => Self::value_from_flags(buttons, RightJoyConButtons::Plus),
+            NsInput::Plus => Self::value_from_flags(buttons, Switch2ControllerButtons::Plus),
 
-            NsInput::Tl => Self::value_from_flags(buttons, RightJoyConButtons::Stick),
+            NsInput::Tr => Self::value_from_flags(buttons, Switch2ControllerButtons::RightStick),
         }
     }
 
-    const CONTROLLER_BUTTONS_BYTES: Range<usize> = 0x2..0x2 + 0x3;
+    fn decode_pro_controller_buttons(&self, buffer: &[u8]) -> HashMap<NsInput, f32> {
+        let buttons_buffer = &buffer[Self::BUTTONS_BYTES];
+        let buttons_buffer = buttons_buffer.try_into().unwrap();
 
-    fn decode_pro_controller_buttons(&self, unique_buffer: &[u8]) -> HashMap<NsInput, f32> {
-        let buttons_buffer = &unique_buffer[Self::CONTROLLER_BUTTONS_BYTES];
-        let buttons_buffer = [0, buttons_buffer[0], buttons_buffer[1], buttons_buffer[2]];
-
-        let buttons_bit_field = u32::from_le_bytes(buttons_buffer);
-        let buttons = ProControllerButtons::from_bits(buttons_bit_field).unwrap();
+        let buttons_bit_field = u32::from_be_bytes(buttons_buffer);
+        let buttons = Switch2ControllerButtons::from_bits(buttons_bit_field).unwrap();
 
         hashmap! {
-            NsInput::Home => Self::value_from_flags(buttons, ProControllerButtons::Home),
-            NsInput::Capture => Self::value_from_flags(buttons, ProControllerButtons::Capture),
+            NsInput::Home => Self::value_from_flags(buttons, Switch2ControllerButtons::Home),
+            NsInput::Capture => Self::value_from_flags(buttons, Switch2ControllerButtons::Capture),
 
-            NsInput::Gr => Self::value_from_flags(buttons, ProControllerButtons::Gr),
-            NsInput::Gl => Self::value_from_flags(buttons, ProControllerButtons::Gl),
+            NsInput::Gr => Self::value_from_flags(buttons, Switch2ControllerButtons::Gr),
+            NsInput::Gl => Self::value_from_flags(buttons, Switch2ControllerButtons::Gl),
 
-            NsInput::Chat => Self::value_from_flags(buttons, ProControllerButtons::C),
+            NsInput::Chat => Self::value_from_flags(buttons, Switch2ControllerButtons::C),
 
-            NsInput::Down => Self::value_from_flags(buttons, ProControllerButtons::Down),
-            NsInput::Right => Self::value_from_flags(buttons, ProControllerButtons::Right),
-            NsInput::Left => Self::value_from_flags(buttons, ProControllerButtons::Left),
-            NsInput::Up => Self::value_from_flags(buttons, ProControllerButtons::Up),
+            NsInput::Down => Self::value_from_flags(buttons, Switch2ControllerButtons::Down),
+            NsInput::Right => Self::value_from_flags(buttons, Switch2ControllerButtons::Right),
+            NsInput::Left => Self::value_from_flags(buttons, Switch2ControllerButtons::Left),
+            NsInput::Up => Self::value_from_flags(buttons, Switch2ControllerButtons::Up),
 
-            NsInput::L => Self::value_from_flags(buttons, ProControllerButtons::L),
-            NsInput::Zl => Self::value_from_flags(buttons, ProControllerButtons::Zl),
+            NsInput::L => Self::value_from_flags(buttons, Switch2ControllerButtons::L),
+            NsInput::Zl => Self::value_from_flags(buttons, Switch2ControllerButtons::Zl),
 
-            NsInput::Minus => Self::value_from_flags(buttons, ProControllerButtons::Minus),
+            NsInput::Minus => Self::value_from_flags(buttons, Switch2ControllerButtons::Minus),
 
-            NsInput::Tl => Self::value_from_flags(buttons, ProControllerButtons::LeftStick),
+            NsInput::Tl => Self::value_from_flags(buttons, Switch2ControllerButtons::LeftStick),
 
-            NsInput::B => Self::value_from_flags(buttons, ProControllerButtons::B),
-            NsInput::A => Self::value_from_flags(buttons, ProControllerButtons::A),
-            NsInput::Y => Self::value_from_flags(buttons, ProControllerButtons::Y),
-            NsInput::X => Self::value_from_flags(buttons, ProControllerButtons::X),
+            NsInput::B => Self::value_from_flags(buttons, Switch2ControllerButtons::B),
+            NsInput::A => Self::value_from_flags(buttons, Switch2ControllerButtons::A),
+            NsInput::Y => Self::value_from_flags(buttons, Switch2ControllerButtons::Y),
+            NsInput::X => Self::value_from_flags(buttons, Switch2ControllerButtons::X),
 
-            NsInput::R => Self::value_from_flags(buttons, ProControllerButtons::R),
-            NsInput::Zr => Self::value_from_flags(buttons, ProControllerButtons::Zr),
+            NsInput::R => Self::value_from_flags(buttons, Switch2ControllerButtons::R),
+            NsInput::Zr => Self::value_from_flags(buttons, Switch2ControllerButtons::Zr),
 
-            NsInput::Plus => Self::value_from_flags(buttons, ProControllerButtons::Plus),
+            NsInput::Plus => Self::value_from_flags(buttons, Switch2ControllerButtons::Plus),
 
-            NsInput::Tr => Self::value_from_flags(buttons, ProControllerButtons::RightStick),
+            NsInput::Tr => Self::value_from_flags(buttons, Switch2ControllerButtons::RightStick),
         }
     }
 
-    fn decode_nso_gc_controller_buttons(&self, unique_buffer: &[u8]) -> HashMap<NsInput, f32> {
-        let buttons_buffer = &unique_buffer[Self::CONTROLLER_BUTTONS_BYTES];
-        let buttons_buffer = [0, buttons_buffer[0], buttons_buffer[1], buttons_buffer[2]];
+    fn decode_nso_gc_controller_buttons(&self, buffer: &[u8]) -> HashMap<NsInput, f32> {
+        let buttons_buffer = &buffer[Self::BUTTONS_BYTES];
+        let buttons_buffer = buttons_buffer.try_into().unwrap();
 
-        let buttons_bit_field = u32::from_le_bytes(buttons_buffer);
-        let buttons = NsoGcControllerButtons::from_bits(buttons_bit_field).unwrap();
+        let buttons_bit_field = u32::from_be_bytes(buttons_buffer);
+        let buttons = Switch2ControllerButtons::from_bits(buttons_bit_field).unwrap();
 
         hashmap! {
-            NsInput::Home => Self::value_from_flags(buttons, NsoGcControllerButtons::Home),
-            NsInput::Capture => Self::value_from_flags(buttons, NsoGcControllerButtons::Capture),
+            NsInput::Home => Self::value_from_flags(buttons, Switch2ControllerButtons::Home),
+            NsInput::Capture => Self::value_from_flags(buttons, Switch2ControllerButtons::Capture),
 
-            NsInput::Chat => Self::value_from_flags(buttons, NsoGcControllerButtons::C),
+            NsInput::Chat => Self::value_from_flags(buttons, Switch2ControllerButtons::C),
 
-            NsInput::Down => Self::value_from_flags(buttons, NsoGcControllerButtons::Down),
-            NsInput::Right => Self::value_from_flags(buttons, NsoGcControllerButtons::Right),
-            NsInput::Left => Self::value_from_flags(buttons, NsoGcControllerButtons::Left),
-            NsInput::Up => Self::value_from_flags(buttons, NsoGcControllerButtons::Up),
+            NsInput::Down => Self::value_from_flags(buttons, Switch2ControllerButtons::Down),
+            NsInput::Right => Self::value_from_flags(buttons, Switch2ControllerButtons::Right),
+            NsInput::Left => Self::value_from_flags(buttons, Switch2ControllerButtons::Left),
+            NsInput::Up => Self::value_from_flags(buttons, Switch2ControllerButtons::Up),
 
-            NsInput::L => Self::value_from_flags(buttons, NsoGcControllerButtons::L),
-            NsInput::Zl => Self::value_from_flags(buttons, NsoGcControllerButtons::Zl),
+            NsInput::L => Self::value_from_flags(buttons, Switch2ControllerButtons::L),
+            NsInput::Zl => Self::value_from_flags(buttons, Switch2ControllerButtons::Zl),
 
-            NsInput::Minus => Self::value_from_flags(buttons, NsoGcControllerButtons::Minus),
+            NsInput::B => Self::value_from_flags(buttons, Switch2ControllerButtons::B),
+            NsInput::A => Self::value_from_flags(buttons, Switch2ControllerButtons::A),
+            NsInput::Y => Self::value_from_flags(buttons, Switch2ControllerButtons::Y),
+            NsInput::X => Self::value_from_flags(buttons, Switch2ControllerButtons::X),
 
-            NsInput::Tl => Self::value_from_flags(buttons, NsoGcControllerButtons::LeftStick),
+            NsInput::R => Self::value_from_flags(buttons, Switch2ControllerButtons::R),
+            NsInput::Zr => Self::value_from_flags(buttons, Switch2ControllerButtons::Zr),
 
-            NsInput::B => Self::value_from_flags(buttons, NsoGcControllerButtons::B),
-            NsInput::A => Self::value_from_flags(buttons, NsoGcControllerButtons::A),
-            NsInput::Y => Self::value_from_flags(buttons, NsoGcControllerButtons::Y),
-            NsInput::X => Self::value_from_flags(buttons, NsoGcControllerButtons::X),
-
-            NsInput::R => Self::value_from_flags(buttons, NsoGcControllerButtons::R),
-            NsInput::Zr => Self::value_from_flags(buttons, NsoGcControllerButtons::Zr),
-
-            NsInput::Plus => Self::value_from_flags(buttons, NsoGcControllerButtons::Plus),
-
-            NsInput::Tr => Self::value_from_flags(buttons, NsoGcControllerButtons::RightStick),
+            NsInput::Plus => Self::value_from_flags(buttons, Switch2ControllerButtons::Plus),
         }
     }
 
@@ -388,12 +461,12 @@ impl Decoder {
         }
     }
 
-    fn decode_nso_gc_controller_triggers(&self, unique_buffer: &[u8]) -> HashMap<NsInput, f32> {
-        const LEFT_ANALOG_TRIGGER_BYTE: usize = 0xC;
-        const RIGHT_ANALOG_TRIGGER_BYTE: usize = 0xD;
+    fn decode_nso_gc_controller_triggers(&self, buffer: &[u8]) -> HashMap<NsInput, f32> {
+        const LEFT_ANALOG_TRIGGER_BYTE: usize = 0x3C;
+        const RIGHT_ANALOG_TRIGGER_BYTE: usize = 0x3D;
 
-        let l_trigger = self.decode_calibrated_trigger(unique_buffer[LEFT_ANALOG_TRIGGER_BYTE]);
-        let r_trigger = self.decode_calibrated_trigger(unique_buffer[RIGHT_ANALOG_TRIGGER_BYTE]);
+        let l_trigger = self.decode_calibrated_trigger(buffer[LEFT_ANALOG_TRIGGER_BYTE]);
+        let r_trigger = self.decode_calibrated_trigger(buffer[RIGHT_ANALOG_TRIGGER_BYTE]);
 
         hashmap! {
             NsInput::LTrigger => l_trigger,
@@ -403,10 +476,10 @@ impl Decoder {
 
     // ------------ Controller decodings ----------------
 
-    pub fn decode_left_joy_con(&self, unique_buffer: &[u8], common_buffer: &[u8]) -> InputData {
-        let stick_inputs = self.decode_joy_con_stick(unique_buffer);
-        let button_inputs = self.decode_left_joy_con_buttons(unique_buffer);
-        let motion_inputs = self.decode_motion(common_buffer);
+    pub fn decode_left_joy_con(&self, buffer: &[u8]) -> InputData {
+        let stick_inputs = self.decode_left_stick(buffer);
+        let button_inputs = self.decode_left_joy_con_buttons(buffer);
+        let motion_inputs = self.decode_motion(buffer);
 
         let mut inputs = stick_inputs;
         inputs.extend(button_inputs);
@@ -415,10 +488,10 @@ impl Decoder {
         InputData::new(inputs)
     }
 
-    pub fn decode_right_joy_con(&self, unique_buffer: &[u8], common_buffer: &[u8]) -> InputData {
-        let stick_inputs = self.decode_joy_con_stick(unique_buffer);
-        let button_inputs = self.decode_right_joy_con_buttons(unique_buffer);
-        let motion_inputs = self.decode_motion(common_buffer);
+    pub fn decode_right_joy_con(&self, buffer: &[u8]) -> InputData {
+        let stick_inputs = self.decode_right_stick(buffer);
+        let button_inputs = self.decode_right_joy_con_buttons(buffer);
+        let motion_inputs = self.decode_motion(buffer);
 
         let mut inputs = stick_inputs;
         inputs.extend(button_inputs);
@@ -429,21 +502,19 @@ impl Decoder {
 
     pub fn decode_dual_joy_cons(
         &self,
-        left_unique_buffer: &[u8],
-        left_common_buffer: &[u8],
-        right_unique_buffer: &[u8],
-        right_common_buffer: &[u8],
+        left_buffer: &[u8],
+        right_buffer: &[u8],
         motion_source: MotionSource,
     ) -> InputData {
-        let left_stick_inputs = self.decode_joy_con_stick(left_unique_buffer);
-        let left_button_inputs = self.decode_left_joy_con_buttons(left_unique_buffer);
+        let left_stick_inputs = self.decode_left_stick(left_buffer);
+        let left_button_inputs = self.decode_left_joy_con_buttons(left_buffer);
 
-        let right_stick_inputs = self.decode_joy_con_stick(right_unique_buffer);
-        let right_button_inputs = self.decode_left_joy_con_buttons(right_unique_buffer);
+        let right_stick_inputs = self.decode_right_stick(right_buffer);
+        let right_button_inputs = self.decode_left_joy_con_buttons(right_buffer);
 
         let motion_data = match motion_source {
-            MotionSource::Left => self.decode_motion(left_common_buffer),
-            MotionSource::Right => self.decode_motion(right_common_buffer),
+            MotionSource::Left => self.decode_motion(left_buffer),
+            MotionSource::Right => self.decode_motion(right_buffer),
         };
 
         let mut inputs = left_stick_inputs;
@@ -455,29 +526,29 @@ impl Decoder {
         InputData::new(inputs)
     }
 
-    pub fn decode_pro_controller(&self, unique_buffer: &[u8], common_buffer: &[u8]) -> InputData {
-        let stick_inputs = self.decode_controller_stick(unique_buffer);
-        let button_inputs = self.decode_pro_controller_buttons(unique_buffer);
-        let motion_inputs = self.decode_motion(common_buffer);
+    pub fn decode_pro_controller(&self, buffer: &[u8]) -> InputData {
+        let left_stick_inputs = self.decode_left_stick(buffer);
+        let right_stick_inputs = self.decode_right_stick(buffer);
+        let button_inputs = self.decode_pro_controller_buttons(buffer);
+        let motion_inputs = self.decode_motion(buffer);
 
-        let mut inputs = stick_inputs;
+        let mut inputs = left_stick_inputs;
+        inputs.extend(right_stick_inputs);
         inputs.extend(button_inputs);
         inputs.extend(motion_inputs);
 
         InputData::new(inputs)
     }
 
-    pub fn decode_nso_gc_controller(
-        &self,
-        unique_buffer: &[u8],
-        common_buffer: &[u8],
-    ) -> InputData {
-        let stick_inputs = self.decode_controller_stick(unique_buffer);
-        let button_inputs = self.decode_nso_gc_controller_buttons(unique_buffer);
-        let trigger_inputs = self.decode_nso_gc_controller_triggers(unique_buffer);
-        let motion_inputs = self.decode_motion(common_buffer);
+    pub fn decode_nso_gc_controller(&self, buffer: &[u8]) -> InputData {
+        let left_stick_inputs = self.decode_left_stick(buffer);
+        let right_stick_inputs = self.decode_right_stick(buffer);
+        let button_inputs = self.decode_nso_gc_controller_buttons(buffer);
+        let trigger_inputs = self.decode_nso_gc_controller_triggers(buffer);
+        let motion_inputs = self.decode_motion(buffer);
 
-        let mut inputs = stick_inputs;
+        let mut inputs = left_stick_inputs;
+        inputs.extend(right_stick_inputs);
         inputs.extend(button_inputs);
         inputs.extend(trigger_inputs);
         inputs.extend(motion_inputs);

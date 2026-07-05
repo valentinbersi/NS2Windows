@@ -60,8 +60,7 @@ const PRO_CONTROLLER_INPUT_UUID: &str = "7492866c-ec3e-4619-8258-32755ffcc0f8";
 const NSO_GC_CONTROLLER_INPUT_UUID: &str = "8261cba1-9435-420c-84d6-f0c75a2c8e4d";
 
 struct Characteristics {
-    common_input: Characteristic,
-    unique_input: Characteristic,
+    input: Characteristic,
     output: Characteristic,
 }
 
@@ -117,16 +116,14 @@ impl BluetoothConnector {
         })
         .await
         .map_err(Into::into)
-        .map(|value| value.map_err(Into::into))
-        .flatten()
+        .and_then(|value| value.map_err(Into::into))
     }
 
     fn discover_characteristics(
         &self,
         controller: &Peripheral,
     ) -> Result<(NsControllerKind, Characteristics), ConnectorError> {
-        let mut common_input = None;
-        let mut unique_input = None;
+        let mut input = None;
         let mut controller_kind = None;
         let mut output = None;
 
@@ -138,7 +135,7 @@ impl BluetoothConnector {
         let output_uuid = Uuid::from_str("649d4ac9-8eb7-4e6c-af44-1ea54fe5f005").unwrap();
 
         for characteristic in controller.characteristics() {
-            if common_input.is_some() && unique_input.is_some() && output.is_some() {
+            if input.is_some() && controller_kind.is_some() && output.is_some() {
                 break;
             }
 
@@ -146,7 +143,7 @@ impl BluetoothConnector {
 
             // Get the common input characteristic
             if uuid == common_input_uuid {
-                common_input = Some(characteristic);
+                input = Some(characteristic);
                 continue;
             }
 
@@ -159,44 +156,32 @@ impl BluetoothConnector {
             // Get the left joy con unique characteristic
             if uuid == left_joy_con_input_uuid {
                 controller_kind = Some(NsControllerKind::LeftJoyCon);
-                unique_input = Some(characteristic);
                 continue;
             }
 
             // Get the right joy con unique characteristic
             if uuid == right_joy_con_input_uuid {
                 controller_kind = Some(NsControllerKind::RightJoyCon);
-                unique_input = Some(characteristic);
                 continue;
             }
 
             // Get the pro controller unique characteristic
             if uuid == pro_controller_input_uuid {
                 controller_kind = Some(NsControllerKind::ProController);
-                unique_input = Some(characteristic);
                 continue;
             }
 
             // Get the nso gc controller unique characteristic
             if uuid == nso_gc_controller_input_uuid {
                 controller_kind = Some(NsControllerKind::NsoGcController);
-                unique_input = Some(characteristic);
             }
         }
 
-        let common_input = common_input.ok_or_else(|| ConnectorError::ConnectionError)?;
-        let unique_input = unique_input.ok_or_else(|| ConnectorError::ConnectionError)?;
+        let input = input.ok_or_else(|| ConnectorError::ConnectionError)?;
         let controller_kind = controller_kind.ok_or_else(|| ConnectorError::ConnectionError)?;
         let output = output.ok_or_else(|| ConnectorError::ConnectionError)?;
 
-        Ok((
-            controller_kind,
-            Characteristics {
-                common_input,
-                unique_input,
-                output,
-            },
-        ))
+        Ok((controller_kind, Characteristics { input, output }))
     }
 
     pub async fn wait_for_controller(&self) -> Result<ConnectedController, ConnectorError> {
@@ -220,8 +205,7 @@ impl BluetoothConnector {
 
         let connected_controller = ConnectedController::new(
             controller,
-            characteristics.common_input,
-            characteristics.unique_input,
+            characteristics.input,
             characteristics.output,
             controller_kind,
         );

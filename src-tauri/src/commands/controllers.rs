@@ -14,19 +14,19 @@ use crate::state::emulated_controller_task::EmulatedControllerTask;
 use btleplug::api::Peripheral as PeripheralApi;
 use btleplug::platform::Peripheral;
 use futures::StreamExt;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU16, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
-use tauri::State;
 use tauri::async_runtime::JoinHandle;
+use tauri::State;
 use tokio::sync::watch;
 use tokio::sync::watch::{Receiver, Sender};
 use tokio::time;
 use tokio::time::Interval;
 use uuid::Uuid;
-use vigem_rust::TargetHandle;
 use vigem_rust::client::ClientError;
 use vigem_rust::target::{DualShock4, Xbox360};
+use vigem_rust::TargetHandle;
 
 #[derive(Clone)]
 enum VirtualController {
@@ -107,8 +107,7 @@ fn start_single_controller_emulation(
     kind: NsControllerKind,
     profile: Profile,
     virtual_controller: VirtualController,
-    unique_receiver: Receiver<Arc<Vec<u8>>>,
-    common_receiver: Receiver<Arc<Vec<u8>>>,
+    receiver: Receiver<Arc<Vec<u8>>>,
 ) -> JoinHandle<()> {
     let decoder = Decoder;
     let evaluator = Evaluator;
@@ -129,26 +128,17 @@ fn start_single_controller_emulation(
             )
             .await;
 
-            let unique_buffer = unique_receiver.borrow().clone();
-            let common_buffer = common_receiver.borrow().clone();
+            let buffer = receiver.borrow().clone();
 
-            if unique_buffer.is_empty() || common_buffer.is_empty() {
+            if buffer.is_empty() {
                 continue;
             }
 
             let input = match kind {
-                NsControllerKind::LeftJoyCon => {
-                    decoder.decode_left_joy_con(&unique_buffer, &common_buffer)
-                }
-                NsControllerKind::RightJoyCon => {
-                    decoder.decode_right_joy_con(&unique_buffer, &common_buffer)
-                }
-                NsControllerKind::ProController => {
-                    decoder.decode_pro_controller(&unique_buffer, &common_buffer)
-                }
-                NsControllerKind::NsoGcController => {
-                    decoder.decode_nso_gc_controller(&unique_buffer, &common_buffer)
-                }
+                NsControllerKind::LeftJoyCon => decoder.decode_left_joy_con(&buffer),
+                NsControllerKind::RightJoyCon => decoder.decode_right_joy_con(&buffer),
+                NsControllerKind::ProController => decoder.decode_pro_controller(&buffer),
+                NsControllerKind::NsoGcController => decoder.decode_nso_gc_controller(&buffer),
             };
 
             let output = evaluator.evaluate_profile(&profile, &input);
@@ -170,36 +160,19 @@ async fn start_single_controller(
 
     let device = controller.device();
 
-    let (unique_sender, unique_receiver) = watch::channel(Arc::new(vec![0_u8; 0]));
-    let unique_input_listener = start_input_listening(
-        device.controller(),
-        device.unique_input_uuid(),
-        unique_sender,
-    )
-    .await?;
-
-    let (common_sender, common_receiver) = watch::channel(Arc::new(vec![0_u8; 0]));
-    let common_input_listener = start_input_listening(
-        device.controller(),
-        device.common_input_uuid(),
-        common_sender,
-    )
-    .await?;
+    let (sender, receiver) = watch::channel(Arc::new(vec![]));
+    let input_listener =
+        start_input_listening(device.controller(), device.input_uuid(), sender).await?;
 
     let output_emulator = start_single_controller_emulation(
         &state,
-        controller.device().kind(),
+        device.kind(),
         profile,
         virtual_controller,
-        unique_receiver,
-        common_receiver,
+        receiver,
     );
 
-    let task = EmulatedControllerTask::new_single_controller(
-        unique_input_listener,
-        common_input_listener,
-        output_emulator,
-    );
+    let task = EmulatedControllerTask::new_single_controller(input_listener, output_emulator);
 
     let id = Uuid::now_v7();
 
@@ -214,10 +187,8 @@ fn start_dual_joy_con_emulation(
     profile: Profile,
     motion_source: MotionSource,
     virtual_controller: VirtualController,
-    left_unique_receiver: Receiver<Arc<Vec<u8>>>,
-    left_common_receiver: Receiver<Arc<Vec<u8>>>,
-    right_unique_receiver: Receiver<Arc<Vec<u8>>>,
-    right_common_receiver: Receiver<Arc<Vec<u8>>>,
+    left_receiver: Receiver<Arc<Vec<u8>>>,
+    right_receiver: Receiver<Arc<Vec<u8>>>,
 ) -> JoinHandle<()> {
     let decoder = Decoder;
     let evaluator = Evaluator;
@@ -238,29 +209,15 @@ fn start_dual_joy_con_emulation(
             )
             .await;
 
-            let left_unique_buffer = left_unique_receiver.borrow().clone();
-            let left_common_buffer = left_common_receiver.borrow().clone();
-            let right_unique_buffer = right_unique_receiver.borrow().clone();
-            let right_common_buffer = right_common_receiver.borrow().clone();
+            let left_buffer = left_receiver.borrow().clone();
+            let right_buffer = right_receiver.borrow().clone();
 
-            if left_unique_buffer.is_empty()
-                || left_common_buffer.is_empty()
-                || right_unique_buffer.is_empty()
-                || right_common_buffer.is_empty()
-            {
+            if left_buffer.is_empty() || right_buffer.is_empty() {
                 continue;
             }
 
-            let input = decoder.decode_dual_joy_cons(
-                &left_unique_buffer,
-                &left_common_buffer,
-                &right_unique_buffer,
-                &right_common_buffer,
-                motion_source,
-            );
-
+            let input = decoder.decode_dual_joy_cons(&left_buffer, &right_buffer, motion_source);
             let output = evaluator.evaluate_profile(&profile, &input);
-
             let _ = virtual_controller.update(output);
         }
     })
@@ -280,37 +237,20 @@ async fn start_dual_joy_con(
     let left_device = left.device();
     let right_device = right.device();
 
-    let (left_unique_sender, left_unique_receiver) = watch::channel(Arc::new(vec![0_u8; 0]));
-    let (left_common_sender, left_common_receiver) = watch::channel(Arc::new(vec![0_u8; 0]));
+    let (left_sender, left_receiver) = watch::channel(Arc::new(vec![]));
+    let (right_sender, right_receiver) = watch::channel(Arc::new(vec![]));
 
-    let (right_unique_sender, right_unique_receiver) = watch::channel(Arc::new(vec![0_u8; 0]));
-    let (right_common_sender, right_common_receiver) = watch::channel(Arc::new(vec![0_u8; 0]));
-
-    let left_unique_input_listener = start_input_listening(
+    let left_input_listener = start_input_listening(
         left_device.controller(),
-        left_device.unique_input_uuid(),
-        left_unique_sender,
+        left_device.input_uuid(),
+        left_sender,
     )
     .await?;
 
-    let left_common_input_listener = start_input_listening(
-        left_device.controller(),
-        left_device.common_input_uuid(),
-        left_common_sender,
-    )
-    .await?;
-
-    let right_unique_input_listener = start_input_listening(
+    let right_input_listener = start_input_listening(
         right_device.controller(),
-        right_device.unique_input_uuid(),
-        right_unique_sender,
-    )
-    .await?;
-
-    let right_common_input_listener = start_input_listening(
-        right_device.controller(),
-        right_device.common_input_uuid(),
-        right_common_sender,
+        right_device.input_uuid(),
+        right_sender,
     )
     .await?;
 
@@ -319,18 +259,14 @@ async fn start_dual_joy_con(
         profile,
         dual_joy_con.motion_source,
         virtual_controller,
-        left_unique_receiver,
-        left_common_receiver,
-        right_unique_receiver,
-        right_common_receiver,
+        left_receiver,
+        right_receiver,
     );
 
     let id = Uuid::now_v7();
     let task = EmulatedControllerTask::new_dual_joy_con(
-        left_unique_input_listener,
-        left_common_input_listener,
-        right_unique_input_listener,
-        right_common_input_listener,
+        left_input_listener,
+        right_input_listener,
         output_emulator,
     );
 

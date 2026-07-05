@@ -7,15 +7,15 @@ use crate::state::ns_controller::NsController;
 use btleplug::api::Peripheral as PeripheralApi;
 use btleplug::platform::Peripheral;
 use futures::StreamExt;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU16, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 use tauri::async_runtime::JoinHandle;
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::watch;
 use tokio::sync::watch::{Receiver, Sender};
 use tokio::time;
-use tokio::time::{Interval, sleep};
+use tokio::time::{sleep, Interval};
 use uuid::Uuid;
 
 async fn wait_and_connect(
@@ -47,7 +47,7 @@ async fn configure_connection(
 
     // Suscribe to input listening
     controller
-        .suscribe_inputs()
+        .suscribe_input()
         .await
         .map_err(|err| err.to_string())?;
 
@@ -122,8 +122,7 @@ fn start_input_reporting(
     app: AppHandle,
     id: Uuid,
     kind: NsControllerKind,
-    unique_receiver: Receiver<Arc<Vec<u8>>>,
-    common_receiver: Receiver<Arc<Vec<u8>>>,
+    receiver: Receiver<Arc<Vec<u8>>>,
 ) -> JoinHandle<()> {
     let decoder = Decoder;
 
@@ -143,29 +142,17 @@ fn start_input_reporting(
             )
             .await;
 
-            let unique_buffer = unique_receiver.borrow().clone();
-            let common_buffer = common_receiver.borrow().clone();
+            let buffer = receiver.borrow().clone();
 
-            if common_buffer.is_empty() || unique_buffer.is_empty() {
+            if buffer.is_empty() {
                 continue;
             }
 
             let input = match kind {
-                NsControllerKind::LeftJoyCon => {
-                    decoder.decode_left_joy_con(&unique_buffer, &common_buffer)
-                }
-
-                NsControllerKind::RightJoyCon => {
-                    decoder.decode_right_joy_con(&unique_buffer, &common_buffer)
-                }
-
-                NsControllerKind::ProController => {
-                    decoder.decode_pro_controller(&unique_buffer, &common_buffer)
-                }
-
-                NsControllerKind::NsoGcController => {
-                    decoder.decode_nso_gc_controller(&unique_buffer, &common_buffer)
-                }
+                NsControllerKind::LeftJoyCon => decoder.decode_left_joy_con(&buffer),
+                NsControllerKind::RightJoyCon => decoder.decode_right_joy_con(&buffer),
+                NsControllerKind::ProController => decoder.decode_pro_controller(&buffer),
+                NsControllerKind::NsoGcController => decoder.decode_nso_gc_controller(&buffer),
             };
 
             let _ = app.emit("update-input", (id, input));
@@ -183,37 +170,13 @@ pub async fn connect_controller(
     let device = wait_and_connect(&state, &app, &id).await?;
     configure_connection(&state, &app, &id, &device).await?;
 
-    let (common_sender, common_receiver) = watch::channel(Arc::new(vec![]));
-    let common_input_listener = start_input_listening(
-        device.controller(),
-        device.common_input_uuid(),
-        common_sender,
-    )
-    .await?;
+    let (sender, receiver) = watch::channel(Arc::new(vec![]));
+    let input_listener =
+        start_input_listening(device.controller(), device.input_uuid(), sender).await?;
 
-    let (unique_sender, unique_receiver) = watch::channel(Arc::new(vec![]));
-    let unique_input_listener = start_input_listening(
-        device.controller(),
-        device.unique_input_uuid(),
-        unique_sender,
-    )
-    .await?;
+    let input_reporter = start_input_reporting(&state, app, id, device.kind(), receiver);
 
-    let input_reporter = start_input_reporting(
-        &state,
-        app,
-        id,
-        device.kind(),
-        unique_receiver,
-        common_receiver,
-    );
-
-    let controller = NsController::new(
-        device,
-        unique_input_listener,
-        common_input_listener,
-        input_reporter,
-    );
+    let controller = NsController::new(device, input_listener, input_reporter);
 
     state.insert_ns_controller(id, controller).await;
 
