@@ -3,6 +3,7 @@ use crate::data::output_data::OutputData;
 use crate::data::profile_kind::ProfileKind;
 use crate::decode::decoder::Decoder;
 use crate::dtos::emulated_controller::EmulatedController;
+use crate::dtos::motion_source::MotionSource;
 use crate::dtos::ns_connected_controller::{DualJoyCon, NsConnectedController, SingleController};
 use crate::encode::ds4_encoder::Ds4Encoder;
 use crate::encode::xbox_encoder::XboxEncoder;
@@ -10,20 +11,22 @@ use crate::evaluation::evaluator::Evaluator;
 use crate::profiles::profile::Profile;
 use crate::state::app_state::AppState;
 use crate::state::emulated_controller_task::EmulatedControllerTask;
-use crate::state::ns_controller::NsController;
+use btleplug::api::Peripheral as PeripheralApi;
+use btleplug::platform::Peripheral;
 use futures::StreamExt;
+use std::sync::atomic::{AtomicU16, Ordering};
 use std::sync::Arc;
-use std::sync::atomic::Ordering;
 use std::time::Duration;
-use tauri::State;
 use tauri::async_runtime::JoinHandle;
+use tauri::State;
 use tokio::sync::watch;
-use tokio::sync::watch::Sender;
+use tokio::sync::watch::{Receiver, Sender};
 use tokio::time;
+use tokio::time::Interval;
 use uuid::Uuid;
-use vigem_rust::TargetHandle;
 use vigem_rust::client::ClientError;
 use vigem_rust::target::{DualShock4, Xbox360};
+use vigem_rust::TargetHandle;
 
 #[derive(Clone)]
 enum VirtualController {
@@ -56,6 +59,94 @@ impl VirtualController {
     }
 }
 
+async fn start_input_listening(
+    controller: Peripheral,
+    input_uuid: Uuid,
+    sender: Sender<Arc<Vec<u8>>>,
+) -> Result<JoinHandle<()>, String> {
+    let notifications = controller
+        .notifications()
+        .await
+        .map_err(|err| err.to_string())?;
+
+    let input_listener = tauri::async_runtime::spawn(async move {
+        notifications
+            .filter(|notification| {
+                let notification_uuid = notification.uuid;
+                async move { notification_uuid == input_uuid }
+            })
+            .map(|notification| notification.value)
+            .map(Arc::new)
+            .for_each(|buffer| async {
+                let _ = sender.send(buffer);
+            })
+            .await;
+    });
+
+    Ok(input_listener)
+}
+
+async fn tick_interval(
+    frequency: &Arc<AtomicU16>,
+    previous_frequency: &mut u16,
+    interval: &mut Interval,
+) {
+    let frequency = frequency.load(Ordering::Relaxed);
+
+    if *previous_frequency != frequency {
+        *interval = time::interval(Duration::from_secs_f64(1_f64 / frequency as f64));
+    }
+
+    *previous_frequency = frequency;
+
+    interval.tick().await;
+}
+
+fn start_single_controller_emulation(
+    state: &State<'_, AppState>,
+    kind: NsControllerKind,
+    profile: Profile,
+    virtual_controller: VirtualController,
+    receiver: Receiver<Arc<Vec<u8>>>,
+) -> JoinHandle<()> {
+    let decoder = Decoder;
+    let evaluator = Evaluator;
+
+    let emulation_frequency = state.emulation_frequency.clone();
+    let mut previous_emulation_frequency = emulation_frequency.load(Ordering::Relaxed);
+
+    let mut interval = time::interval(Duration::from_secs_f64(
+        1_f64 / previous_emulation_frequency as f64,
+    ));
+
+    tauri::async_runtime::spawn(async move {
+        loop {
+            tick_interval(
+                &emulation_frequency,
+                &mut previous_emulation_frequency,
+                &mut interval,
+            )
+            .await;
+
+            let buffer = receiver.borrow().clone();
+
+            if buffer.is_empty() {
+                continue;
+            }
+
+            let input = match kind {
+                NsControllerKind::LeftJoyCon => decoder.decode_left_joy_con(&buffer),
+                NsControllerKind::RightJoyCon => decoder.decode_right_joy_con(&buffer),
+                NsControllerKind::ProController => decoder.decode_pro_controller(&buffer),
+                NsControllerKind::NsoGcController => decoder.decode_nso_gc_controller(&buffer),
+            };
+
+            let output = evaluator.evaluate_profile(&profile, &input);
+            let _ = virtual_controller.update(output);
+        }
+    })
+}
+
 async fn start_single_controller(
     state: State<'_, AppState>,
     profile: Profile,
@@ -67,66 +158,21 @@ async fn start_single_controller(
         .await
         .ok_or_else(|| format!("Could not find controller with id {}", single_controller.id))?;
 
-    let (sender, receiver) = watch::channel(Arc::new(vec![0_u8; 0]));
+    let device = controller.device();
 
-    let mut notifications = controller
-        .notifications()
-        .await
-        .map_err(|err| err.to_string())?;
+    let (sender, receiver) = watch::channel(Arc::new(vec![]));
+    let input_listener =
+        start_input_listening(device.controller(), device.input_uuid(), sender).await?;
 
-    let input_uuid = controller.input_uuid();
+    let output_emulator = start_single_controller_emulation(
+        &state,
+        device.kind(),
+        profile,
+        virtual_controller,
+        receiver,
+    );
 
-    let input_pooler = tauri::async_runtime::spawn(async move {
-        while let Some(notification) = notifications.next().await {
-            if notification.uuid != input_uuid {
-                continue;
-            }
-
-            let buffer = Arc::new(notification.value);
-            let _ = sender.send(buffer);
-        }
-    });
-
-    let decoder = Decoder;
-    let evaluator = Evaluator;
-    let controller_kind = controller.kind();
-    let emulation_frequency = state.emulation_frequency.clone();
-    let mut previous_emulation_frequency = emulation_frequency.load(Ordering::Relaxed);
-    let mut interval = time::interval(Duration::from_secs_f64(
-        1_f64 / previous_emulation_frequency as f64,
-    ));
-    let output_emulator = tauri::async_runtime::spawn(async move {
-        loop {
-            let emulation_frequency = emulation_frequency.load(Ordering::Relaxed);
-
-            if previous_emulation_frequency != emulation_frequency {
-                interval =
-                    time::interval(Duration::from_secs_f64(1_f64 / emulation_frequency as f64));
-            }
-
-            previous_emulation_frequency = emulation_frequency;
-
-            interval.tick().await;
-
-            let buffer = receiver.borrow().clone();
-
-            if buffer.is_empty() {
-                continue;
-            }
-
-            let input = match controller_kind {
-                NsControllerKind::LeftJoyCon => decoder.decode_left_joycon(&buffer),
-                NsControllerKind::RightJoyCon => decoder.decode_right_joycon(&buffer),
-                NsControllerKind::ProController => decoder.decode_pro_controller(&buffer),
-                NsControllerKind::NsoGcController => decoder.decode_gc_controller(&buffer),
-            };
-
-            let output = evaluator.evaluate_profile(&profile, &input);
-            let _ = virtual_controller.update(output);
-        }
-    });
-
-    let task = EmulatedControllerTask::new_single_controller(input_pooler, output_emulator);
+    let task = EmulatedControllerTask::new_single_controller(input_listener, output_emulator);
 
     let id = Uuid::now_v7();
 
@@ -135,26 +181,46 @@ async fn start_single_controller(
     Ok(id)
 }
 
-async fn spawn_input_task(
-    controller: Arc<NsController>,
-    sender: Sender<Arc<Vec<u8>>>,
-) -> Result<JoinHandle<()>, String> {
-    let input_uuid = controller.input_uuid();
-    let mut notifications = controller
-        .notifications()
-        .await
-        .map_err(|err| err.to_string())?;
+#[allow(clippy::too_many_arguments)]
+fn start_dual_joy_con_emulation(
+    state: &State<'_, AppState>,
+    profile: Profile,
+    motion_source: MotionSource,
+    virtual_controller: VirtualController,
+    left_receiver: Receiver<Arc<Vec<u8>>>,
+    right_receiver: Receiver<Arc<Vec<u8>>>,
+) -> JoinHandle<()> {
+    let decoder = Decoder;
+    let evaluator = Evaluator;
 
-    Ok(tauri::async_runtime::spawn(async move {
-        while let Some(notification) = notifications.next().await {
-            if notification.uuid != input_uuid {
+    let emulation_frequency = state.emulation_frequency.clone();
+    let mut previous_emulation_frequency = emulation_frequency.load(Ordering::Relaxed);
+
+    let mut interval = time::interval(Duration::from_secs_f64(
+        1_f64 / previous_emulation_frequency as f64,
+    ));
+
+    tauri::async_runtime::spawn(async move {
+        loop {
+            tick_interval(
+                &emulation_frequency,
+                &mut previous_emulation_frequency,
+                &mut interval,
+            )
+            .await;
+
+            let left_buffer = left_receiver.borrow().clone();
+            let right_buffer = right_receiver.borrow().clone();
+
+            if left_buffer.is_empty() || right_buffer.is_empty() {
                 continue;
             }
 
-            let buffer = Arc::new(notification.value);
-            let _ = sender.send(buffer);
+            let input = decoder.decode_dual_joy_cons(&left_buffer, &right_buffer, motion_source);
+            let output = evaluator.evaluate_profile(&profile, &input);
+            let _ = virtual_controller.update(output);
         }
-    }))
+    })
 }
 
 async fn start_dual_joy_con(
@@ -168,53 +234,41 @@ async fn start_dual_joy_con(
         .await
         .map_err(|id| format!("Could not found a controller with id {id}"))?;
 
-    let (left_sender, left_receiver) = watch::channel(Arc::new(vec![0_u8; 0]));
-    let (right_sender, right_receiver) = watch::channel(Arc::new(vec![0_u8; 0]));
+    let left_device = left.device();
+    let right_device = right.device();
 
-    let left_task = spawn_input_task(left, left_sender).await?;
-    let right_task = spawn_input_task(right, right_sender).await?;
+    let (left_sender, left_receiver) = watch::channel(Arc::new(vec![]));
+    let (right_sender, right_receiver) = watch::channel(Arc::new(vec![]));
 
-    let decoder = Decoder;
-    let evaluator = Evaluator;
-    let emulation_frequency = state.emulation_frequency.clone();
-    let mut previous_emulation_frequency = emulation_frequency.load(Ordering::Relaxed);
-    let mut interval = time::interval(Duration::from_secs_f64(
-        1_f64 / previous_emulation_frequency as f64,
-    ));
-    let output_task = tauri::async_runtime::spawn(async move {
-        loop {
-            let emulation_frequency = emulation_frequency.load(Ordering::Relaxed);
+    let left_input_listener = start_input_listening(
+        left_device.controller(),
+        left_device.input_uuid(),
+        left_sender,
+    )
+    .await?;
 
-            if previous_emulation_frequency != emulation_frequency {
-                interval =
-                    time::interval(Duration::from_secs_f64(1_f64 / emulation_frequency as f64));
-            }
+    let right_input_listener = start_input_listening(
+        right_device.controller(),
+        right_device.input_uuid(),
+        right_sender,
+    )
+    .await?;
 
-            previous_emulation_frequency = emulation_frequency;
-
-            interval.tick().await;
-
-            let left_buffer = left_receiver.borrow().clone();
-            let right_buffer = right_receiver.borrow().clone();
-
-            if left_buffer.is_empty() || right_buffer.is_empty() {
-                continue;
-            }
-
-            let input = decoder.decode_dual_joycons(
-                &left_buffer,
-                &right_buffer,
-                dual_joy_con.motion_source,
-            );
-
-            let output = evaluator.evaluate_profile(&profile, &input);
-
-            let _ = virtual_controller.update(output);
-        }
-    });
+    let output_emulator = start_dual_joy_con_emulation(
+        &state,
+        profile,
+        dual_joy_con.motion_source,
+        virtual_controller,
+        left_receiver,
+        right_receiver,
+    );
 
     let id = Uuid::now_v7();
-    let task = EmulatedControllerTask::new_dual_joy_con(left_task, right_task, output_task);
+    let task = EmulatedControllerTask::new_dual_joy_con(
+        left_input_listener,
+        right_input_listener,
+        output_emulator,
+    );
 
     state.insert_emulated_controller(id, task).await;
 

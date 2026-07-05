@@ -1,2 +1,2 @@
-pub mod connected_device;
+pub mod connected_controller;
 pub mod connector;

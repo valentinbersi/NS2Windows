@@ -1,51 +1,33 @@
-use crate::connection::connected_device::ConnectedDevice;
-use crate::data::ns_controller_kind::NsControllerKind;
-use btleplug::api::{Peripheral as PeripheralApi, ValueNotification};
-use futures::Stream;
-use std::pin::Pin;
+use crate::connection::connected_controller::ConnectedController;
 use tauri::async_runtime::JoinHandle;
-use uuid::Uuid;
 
 #[derive(Debug)]
 pub struct NsController {
-    kind: NsControllerKind,
-    device: ConnectedDevice,
-    input_poller: JoinHandle<()>,
-    input_informer: JoinHandle<()>,
+    device: ConnectedController,
+    input_listener: JoinHandle<()>,
+    input_reporter: JoinHandle<()>,
 }
 
 impl NsController {
     pub fn new(
-        kind: NsControllerKind,
-        device: ConnectedDevice,
-        input_poller: JoinHandle<()>,
-        input_informer: JoinHandle<()>,
+        device: ConnectedController,
+        input_listener: JoinHandle<()>,
+        input_reporter: JoinHandle<()>,
     ) -> Self {
         Self {
-            kind,
             device,
-            input_poller,
-            input_informer,
+            input_listener,
+            input_reporter,
         }
     }
 
-    pub fn kind(&self) -> NsControllerKind {
-        self.kind
-    }
-
-    pub async fn notifications(
-        &self,
-    ) -> btleplug::Result<Pin<Box<dyn Stream<Item = ValueNotification> + Send>>> {
-        self.device.peripheral.notifications().await
-    }
-
-    pub fn input_uuid(&self) -> Uuid {
-        self.device.input_char.uuid
+    pub fn device(&self) -> &ConnectedController {
+        &self.device
     }
 
     pub async fn disconnect(&self) -> btleplug::Result<()> {
-        self.input_informer.abort();
-        self.input_poller.abort();
+        self.input_reporter.abort();
+        self.input_listener.abort();
         self.device.disconnect().await
     }
 }

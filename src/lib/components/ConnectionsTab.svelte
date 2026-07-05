@@ -19,9 +19,9 @@
 
     // Connection Flow State
     let isConnecting = false;
-    let selectedKind: ControllerKind | null = null;
-    let waitingFor: ControllerKind | null = null;
-    let configuringFor: ControllerKind | null = null;
+    let connectingId: string | null = null;
+    let detectedKind: ControllerKind | null = null;
+    let detectedKinds: Record<string, ControllerKind> = {};
 
     let controllerInputs: Record<string, Partial<Record<NsInput, number>>> = {};
 
@@ -30,12 +30,18 @@
     let unlistenInput: UnlistenFn | null = null;
 
     onMount(async () => {
-        unlistenWaiting = await listen<[string, ControllerKind]>("waiting-connection", (event) => {
-            waitingFor = event.payload[1];
+        unlistenWaiting = await listen<string>("waiting-connection", event => {
+            connectingId = event.payload;
         });
 
         unlistenConfiguring = await listen<[string, ControllerKind]>("configuring-connection", (event) => {
-            configuringFor = event.payload[1];
+            const [id, kind] = event.payload;
+            detectedKinds[id] = kind;
+            detectedKinds = detectedKinds;
+
+            if (id === connectingId) {
+                detectedKind = kind;
+            }
         });
 
         unlistenInput = await listen<[string, { inputs: Record<string, number> }]>("update-input", (event) => {
@@ -52,9 +58,8 @@
 
     function resetConnectionState() {
         isConnecting = false;
-        selectedKind = null;
-        waitingFor = null;
-        configuringFor = null;
+        connectingId = null;
+        detectedKind = null;
     }
 
     async function removeConnection(id: string) {
@@ -70,18 +75,21 @@
         }
     }
 
-    function startConnectionFlow() {
+    async function startConnectionFlow() {
         isConnecting = true;
-        selectedKind = null;
-        waitingFor = null;
-        configuringFor = null;
-    }
-
-    async function selectKindAndConnect(kind: ControllerKind) {
-        selectedKind = kind;
+        connectingId = null;
+        detectedKind = null;
         try {
-            const new_id = await invoke<string>("connect_controller", {kind});
-            connections.update(conns => [...conns, {id: new_id, controller_kind: kind}]);
+            const newId = await invoke<string>("connect_controller");
+            const controllerKind = detectedKinds[newId];
+
+            if (!controllerKind) {
+                throw new Error("The connected controller type was not reported by the backend.");
+            }
+
+            connections.update(conns => [...conns, {id: newId, controller_kind: controllerKind}]);
+            delete detectedKinds[newId];
+            detectedKinds = detectedKinds;
             resetConnectionState();
         } catch (e) {
             console.error("Connection failed", e);
@@ -158,55 +166,27 @@
     {#if isConnecting}
         <div class="modal-overlay">
             <div class="modal-content">
-                {#if selectedKind === null}
-                    <h3>Select Controller to Connect</h3>
-                    <p class="subtitle">Choose the type of device you want to pair.</p>
-
-                    <div class="device-options">
-                        {#each Object.values(ControllerKind) as kind}
-                            <button class="device-btn" on:click={() => selectKindAndConnect(kind)}>
-                                <svelte:component this={getIconForKind(kind)} width="48" height="48"/>
-                                <span>{CONTROLLER_KIND_LABELS[kind]}</span>
-                            </button>
-                        {/each}
-                    </div>
+                <div class="waiting-state">
+                    <div class="spinner"></div>
+                    <h3>{detectedKind ? "Controller Detected" : "Waiting for Controller"}</h3>
+                    {#if detectedKind}
+                        <p class="waiting-prompt">
+                            Configuring <strong>{CONTROLLER_KIND_LABELS[detectedKind]}</strong>.<br/>
+                            Please Wait...
+                        </p>
+                        <div class="waiting-icon">
+                            <svelte:component this={getIconForKind(detectedKind)} width="64" height="64"/>
+                        </div>
+                    {:else}
+                        <p class="waiting-prompt">
+                            Please hold the sync button on the controller you want to pair.
+                        </p>
+                    {/if}
 
                     <div class="modal-actions">
                         <button on:click={resetConnectionState}>Cancel</button>
                     </div>
-                {:else}
-                    <!-- Waiting/Configuring State -->
-                    <div class="waiting-state">
-                        <div class="spinner"></div>
-                        <h3>Pairing Device...</h3>
-                        {#if configuringFor}
-                            <p class="waiting-prompt">
-                                Configuring <strong>{CONTROLLER_KIND_LABELS[configuringFor]}</strong>.<br/>
-                                Please wait...
-                            </p>
-                            <div class="waiting-icon">
-                                <svelte:component this={getIconForKind(configuringFor)} width="64" height="64"/>
-                                <!--                                                  fill="var(&#45;&#45;accent-color)"-->
-                            </div>
-                        {:else if waitingFor}
-                            <p class="waiting-prompt">
-                                Waiting for <strong>{CONTROLLER_KIND_LABELS[waitingFor]}</strong>.<br/>
-                                Please hold the sync button on the device you want to pair.
-                            </p>
-                            <div class="waiting-icon">
-                                <svelte:component this={getIconForKind(waitingFor)} width="64" height="64"/>
-                                <!--                                                  fill="var(&#45;&#45;accent-color)"-->
-
-                            </div>
-                        {:else}
-                            <p class="waiting-prompt">Initializing connection...</p>
-                        {/if}
-
-                        <div class="modal-actions">
-                            <button on:click={resetConnectionState}>Cancel</button>
-                        </div>
-                    </div>
-                {/if}
+                </div>
             </div>
         </div>
     {/if}
@@ -360,39 +340,6 @@
         margin: 0;
         text-align: center;
         font-weight: 500;
-    }
-
-    .subtitle {
-        text-align: center;
-        color: var(--text-muted);
-        margin: 0 0 12px 0;
-        font-size: 14px;
-    }
-
-    .device-options {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-    }
-
-    .device-btn {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 12px;
-        padding: 24px 16px;
-        background: var(--bg-surface);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        transition: all 0.2s;
-        color: var(--text-muted);
-    }
-
-    .device-btn:hover {
-        border-color: var(--accent-color);
-        color: var(--text-color);
-        background: var(--bg-surface-hover);
-        transform: translateY(-2px);
     }
 
     .device-btn span {

@@ -1,6 +1,6 @@
-use crate::connection::connected_device::ConnectedDevice;
+use crate::connection::connected_controller::ConnectedController;
 use bitflags::bitflags;
-use btleplug::api::{Peripheral as PeripheralTrait, WriteType};
+use btleplug::api::WriteType;
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -18,7 +18,7 @@ bitflags! {
 pub struct BluetoothCommunicator;
 
 impl BluetoothCommunicator {
-    pub async fn send_custom_command(&self, device: &ConnectedDevice) -> btleplug::Result<()> {
+    pub async fn send_custom_command(&self, device: &ConnectedController) -> btleplug::Result<()> {
         let commands = [
             [
                 0x0c_u8, 0x91, 0x01, 0x02, 0x00, 0x04, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00,
@@ -29,11 +29,7 @@ impl BluetoothCommunicator {
         ];
 
         for cmd in commands {
-            device
-                .peripheral
-                .write(&device.write_char, &cmd, WriteType::WithoutResponse)
-                .await?;
-
+            device.write(&cmd, WriteType::WithoutResponse).await?;
             sleep(Duration::from_millis(500)).await;
         }
 
@@ -42,7 +38,7 @@ impl BluetoothCommunicator {
 
     pub async fn send_generic_command(
         &self,
-        device: &ConnectedDevice,
+        device: &ConnectedController,
         cmd_id: u8,
         sub_cmd_id: u8,
         data: &[u8],
@@ -60,17 +56,14 @@ impl BluetoothCommunicator {
 
         buffer.extend_from_slice(data);
 
-        device
-            .peripheral
-            .write(&device.write_char, &buffer, WriteType::WithoutResponse)
-            .await?;
+        device.write(&buffer, WriteType::WithoutResponse).await?;
 
         sleep(Duration::from_millis(50)).await;
 
         Ok(())
     }
 
-    pub async fn emit_sound(&self, device: &ConnectedDevice) -> btleplug::Result<()> {
+    pub async fn emit_sound(&self, device: &ConnectedController) -> btleplug::Result<()> {
         let mut data = [0x00_u8; 8];
         data[0] = 0x04;
         self.send_generic_command(device, 0x0A, 0x02, &data).await
@@ -78,7 +71,7 @@ impl BluetoothCommunicator {
 
     pub async fn set_device_led(
         &self,
-        device: &ConnectedDevice,
+        device: &ConnectedController,
         pattern: LedPatten,
     ) -> btleplug::Result<()> {
         let mut data = [0x00_u8; 8];
