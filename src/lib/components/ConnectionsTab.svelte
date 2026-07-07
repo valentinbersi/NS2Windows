@@ -3,8 +3,8 @@
     import {invoke} from "@tauri-apps/api/core";
     import type {UnlistenFn} from "@tauri-apps/api/event";
     import {listen} from "@tauri-apps/api/event";
-    import type {NsInput} from "../types";
-    import {CONTROLLER_KIND_LABELS, ControllerKind} from "../types";
+    import type {LedPattern as LedPatternValue, NsInput} from "../types";
+    import {CONTROLLER_KIND_LABELS, ControllerKind, LedPattern} from "../types";
     import {connections} from "../stores";
 
     import JoyConLeftIcon from "./icons/JoyConLeftIcon.svelte";
@@ -24,6 +24,15 @@
     let detectedKinds: Record<string, ControllerKind> = {};
 
     let controllerInputs: Record<string, Partial<Record<NsInput, number>>> = {};
+    let pendingLedUpdates: Record<string, boolean> = {};
+
+    const DEFAULT_LED_PATTERN = LedPattern.Led1;
+    const LED_OPTIONS: {index: number; flag: LedPatternValue}[] = [
+        {index: 1, flag: LedPattern.Led1},
+        {index: 2, flag: LedPattern.Led2},
+        {index: 3, flag: LedPattern.Led3},
+        {index: 4, flag: LedPattern.Led4},
+    ];
 
     let unlistenWaiting: UnlistenFn | null = null;
     let unlistenConfiguring: UnlistenFn | null = null;
@@ -72,6 +81,8 @@
                 connections.update(conns => conns.filter(c => c.id !== id));
                 const {[id]: _removed, ...remainingInputs} = controllerInputs;
                 controllerInputs = remainingInputs;
+                const {[id]: _removedPendingLedUpdate, ...remainingPendingLedUpdates} = pendingLedUpdates;
+                pendingLedUpdates = remainingPendingLedUpdates;
             } catch (e) {
                 console.error("Failed to remove connection", e);
             }
@@ -90,7 +101,11 @@
                 throw new Error("The connected controller type was not reported by the backend.");
             }
 
-            connections.update(conns => [...conns, {id: newId, controller_kind: controllerKind}]);
+            connections.update(conns => [...conns, {
+                id: newId,
+                controller_kind: controllerKind,
+                led_pattern: DEFAULT_LED_PATTERN,
+            }]);
             delete detectedKinds[newId];
             detectedKinds = detectedKinds;
             resetConnectionState();
@@ -98,6 +113,30 @@
             console.error("Connection failed", e);
             // Just reset state if canceled or failed
             resetConnectionState();
+        }
+    }
+
+    function updateConnectionLedPattern(id: string, ledPattern: LedPatternValue) {
+        connections.update(conns => conns.map(conn => (
+            conn.id === id ? {...conn, led_pattern: ledPattern} : conn
+        )));
+    }
+
+    async function toggleConnectionLed(id: string, currentPattern: LedPatternValue, ledFlag: LedPatternValue) {
+        const nextPattern = LedPattern.toggle(currentPattern, ledFlag);
+
+        updateConnectionLedPattern(id, nextPattern);
+        pendingLedUpdates = {...pendingLedUpdates, [id]: true};
+
+        try {
+            await invoke("set_controller_led", {id, ledPattern: LedPattern.bits(nextPattern)});
+        } catch (e) {
+            console.error("Failed to update controller LED pattern", e);
+            updateConnectionLedPattern(id, currentPattern);
+            alert("Failed to update controller LED pattern: " + e);
+        } finally {
+            const {[id]: _finished, ...remainingPendingLedUpdates} = pendingLedUpdates;
+            pendingLedUpdates = remainingPendingLedUpdates;
         }
     }
 
@@ -146,6 +185,24 @@
                                     on:click={() => removeConnection(connection.id)}>
                                 🗑
                             </button>
+                        </div>
+                    </div>
+
+                    <div class="led-control">
+                        <span class="led-label">Player LEDs</span>
+                        <div class="led-buttons" aria-label="Controller LED pattern">
+                            {#each LED_OPTIONS as led}
+                                <button
+                                        class="led-button"
+                                        class:active={LedPattern.contains(connection.led_pattern, led.flag)}
+                                        disabled={pendingLedUpdates[connection.id]}
+                                        title={`Toggle LED ${led.index}`}
+                                        aria-label={`Toggle LED ${led.index}`}
+                                        aria-pressed={LedPattern.contains(connection.led_pattern, led.flag)}
+                                        on:click={() => toggleConnectionLed(connection.id, connection.led_pattern, led.flag)}
+                                >
+                                </button>
+                            {/each}
                         </div>
                     </div>
 
@@ -288,6 +345,66 @@
         border-radius: 8px;
         min-width: 0;
         width: 100%;
+    }
+
+    .led-control {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 12px;
+        background: var(--bg-color);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+    }
+
+    .led-label {
+        color: var(--text-muted);
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .led-buttons {
+        display: grid;
+        grid-template-columns: repeat(4, 18px);
+        gap: 7px;
+    }
+
+    .led-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        padding: 0;
+        border-radius: 3px;
+        background: #050505;
+        border: 1px solid #4a4a4a;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+    }
+
+    .led-button:hover:not(:disabled):not(.active) {
+        background: rgba(45, 185, 84, 0.28);
+        border-color: rgba(105, 220, 124, 0.65);
+        box-shadow: 0 0 8px rgba(45, 185, 84, 0.2);
+    }
+
+    .led-button.active {
+        background: #32f36f;
+        border-color: #89ff9f;
+        box-shadow:
+            0 0 10px rgba(50, 243, 111, 0.65),
+            inset 0 0 3px rgba(255, 255, 255, 0.55);
+    }
+
+    .led-button.active:hover:not(:disabled) {
+        background: #46ff80;
+        border-color: #a5ffb4;
+    }
+
+    .led-button:disabled {
+        cursor: wait;
+        opacity: 0.75;
     }
 
     .connection-actions {
