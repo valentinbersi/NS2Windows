@@ -1,4 +1,4 @@
-use crate::communication::communicator::LedPatten;
+use crate::communication::communicator::LedPattern;
 use crate::connection::connected_controller::ConnectedController;
 use crate::data::ns_controller_kind::NsControllerKind;
 use crate::decode::decoder::Decoder;
@@ -7,15 +7,15 @@ use crate::state::ns_controller::NsController;
 use btleplug::api::Peripheral as PeripheralApi;
 use btleplug::platform::Peripheral;
 use futures::StreamExt;
-use std::sync::atomic::{AtomicU16, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU16, Ordering};
 use std::time::Duration;
 use tauri::async_runtime::JoinHandle;
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::watch;
 use tokio::sync::watch::{Receiver, Sender};
 use tokio::time;
-use tokio::time::{sleep, Interval};
+use tokio::time::{Interval, sleep};
 use uuid::Uuid;
 
 async fn wait_and_connect(
@@ -80,7 +80,7 @@ async fn configure_connection(
     // Set controller led to ■□□□
     state
         .communicator
-        .set_device_led(controller, LedPatten::Led1)
+        .set_device_led(controller, LedPattern::Led1)
         .await
         .map_err(|err| err.to_string())?;
 
@@ -205,7 +205,7 @@ pub async fn connect_controller(
 pub async fn set_controller_led(
     state: State<'_, AppState>,
     id: Uuid,
-    led_patten: LedPatten,
+    led_pattern: LedPattern,
 ) -> Result<(), String> {
     let device = state
         .get_ns_controller(&id)
@@ -215,7 +215,7 @@ pub async fn set_controller_led(
     let communicator = state.communicator;
 
     communicator
-        .set_device_led(device.device(), led_patten)
+        .set_device_led(device.device(), led_pattern)
         .await
         .map_err(|err| err.to_string())?;
 
