@@ -46,7 +46,10 @@
 
         unlistenInput = await listen<[string, { inputs: Record<string, number> }]>("update-input", (event) => {
             const [id, inputData] = event.payload;
-            controllerInputs[id] = inputData.inputs as Partial<Record<NsInput, number>>;
+            controllerInputs = {
+                ...controllerInputs,
+                [id]: inputData.inputs as Partial<Record<NsInput, number>>,
+            };
         });
     });
 
@@ -67,8 +70,8 @@
             try {
                 await invoke("disconnect_controller", {id});
                 connections.update(conns => conns.filter(c => c.id !== id));
-                delete controllerInputs[id];
-                controllerInputs = controllerInputs; // trigger reactivity
+                const {[id]: _removed, ...remainingInputs} = controllerInputs;
+                controllerInputs = remainingInputs;
             } catch (e) {
                 console.error("Failed to remove connection", e);
             }
@@ -283,6 +286,8 @@
         padding: 16px;
         background: var(--bg-color);
         border-radius: 8px;
+        min-width: 0;
+        width: 100%;
     }
 
     .connection-actions {
