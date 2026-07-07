@@ -1,4 +1,4 @@
-use crate::commands::connections::{connect_controller, disconnect_controller};
+use crate::commands::connections::{connect_controller, disconnect_controller, set_controller_led};
 use crate::commands::controllers::{start_controller, stop_controller};
 use crate::commands::profiles::{
     delete_profile, find_profile_by_name, profile_names, save_profile,
@@ -125,6 +125,7 @@ pub fn run() -> tauri::Result<()> {
         .invoke_handler(tauri::generate_handler![
             connect_controller,
             disconnect_controller,
+            set_controller_led,
             start_controller,
             stop_controller,
             save_profile,

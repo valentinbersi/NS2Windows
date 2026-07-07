@@ -10,9 +10,37 @@ export enum ControllerKind {
     NsoGcController = "NsoGcController",
 }
 
+declare const ledPatternBrand: unique symbol;
+
+export type LedPattern = number & { readonly [ledPatternBrand]: "LedPattern" };
+
+const LED_PATTERN_MASK = 0x0f;
+
+function ledPatternFromBits(bits: number): LedPattern {
+    if (!Number.isInteger(bits) || (bits & ~LED_PATTERN_MASK) !== 0) {
+        throw new Error(`Invalid LED pattern ${bits}; expected a four-bit mask.`);
+    }
+
+    return bits as LedPattern;
+}
+
+export const LedPattern = Object.freeze({
+    Empty: ledPatternFromBits(0),
+    Led1: ledPatternFromBits(0x1),
+    Led2: ledPatternFromBits(0x2),
+    Led3: ledPatternFromBits(0x4),
+    Led4: ledPatternFromBits(0x8),
+
+    fromBits: ledPatternFromBits,
+    bits: (pattern: LedPattern): number => pattern,
+    contains: (pattern: LedPattern, flag: LedPattern): boolean => (pattern & flag) === flag,
+    toggle: (pattern: LedPattern, flag: LedPattern): LedPattern => ledPatternFromBits(pattern ^ flag),
+});
+
 export interface Connection {
     id: string;
     controller_kind: ControllerKind;
+    led_pattern: LedPattern;
 }
 
 export interface SingleController {
