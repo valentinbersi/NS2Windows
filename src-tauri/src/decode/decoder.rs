@@ -510,7 +510,7 @@ impl Decoder {
         let left_button_inputs = self.decode_left_joy_con_buttons(left_buffer);
 
         let right_stick_inputs = self.decode_right_stick(right_buffer);
-        let right_button_inputs = self.decode_left_joy_con_buttons(right_buffer);
+        let right_button_inputs = self.decode_right_joy_con_buttons(right_buffer);
 
         let motion_data = match motion_source {
             MotionSource::Left => self.decode_motion(left_buffer),
