@@ -1,4 +1,4 @@
-use crate::communication::communicator::LedPatten;
+use crate::communication::communicator::LedPattern;
 use crate::connection::connected_controller::ConnectedController;
 use crate::data::ns_controller_kind::NsControllerKind;
 use crate::decode::decoder::Decoder;
@@ -80,7 +80,7 @@ async fn configure_connection(
     // Set controller led to ■□□□
     state
         .communicator
-        .set_device_led(controller, LedPatten::Led1)
+        .set_device_led(controller, LedPattern::Led1)
         .await
         .map_err(|err| err.to_string())?;
 
@@ -199,6 +199,27 @@ pub async fn connect_controller(
     state.insert_ns_controller(id, controller).await;
 
     Ok(id)
+}
+
+#[tauri::command]
+pub async fn set_controller_led(
+    state: State<'_, AppState>,
+    id: Uuid,
+    led_pattern: LedPattern,
+) -> Result<(), String> {
+    let device = state
+        .get_ns_controller(&id)
+        .await
+        .ok_or_else(|| format!("Could not find controller with id {id}"))?;
+
+    let communicator = state.communicator;
+
+    communicator
+        .set_device_led(device.device(), led_pattern)
+        .await
+        .map_err(|err| err.to_string())?;
+
+    Ok(())
 }
 
 #[tauri::command]
