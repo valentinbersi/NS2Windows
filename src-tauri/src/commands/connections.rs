@@ -7,15 +7,15 @@ use crate::state::ns_controller::NsController;
 use btleplug::api::Peripheral as PeripheralApi;
 use btleplug::platform::Peripheral;
 use futures::StreamExt;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU16, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 use tauri::async_runtime::JoinHandle;
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::watch;
 use tokio::sync::watch::{Receiver, Sender};
 use tokio::time;
-use tokio::time::{Interval, sleep};
+use tokio::time::{sleep, Interval};
 use uuid::Uuid;
 
 async fn wait_and_connect(
@@ -199,6 +199,27 @@ pub async fn connect_controller(
     state.insert_ns_controller(id, controller).await;
 
     Ok(id)
+}
+
+#[tauri::command]
+pub async fn set_controller_led(
+    state: State<'_, AppState>,
+    id: Uuid,
+    led_patten: LedPatten,
+) -> Result<(), String> {
+    let device = state
+        .get_ns_controller(&id)
+        .await
+        .ok_or_else(|| format!("Could not find controller with id {id}"))?;
+
+    let communicator = state.communicator;
+
+    communicator
+        .set_device_led(device.device(), led_patten)
+        .await
+        .map_err(|err| err.to_string())?;
+
+    Ok(())
 }
 
 #[tauri::command]
