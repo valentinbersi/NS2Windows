@@ -2,6 +2,8 @@ use crate::connection::connected_controller::ConnectedController;
 use crate::data::ns_controller_kind::NsControllerKind;
 use bitflags::bitflags;
 use btleplug::api::WriteType;
+use serde::de::Error;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -9,11 +11,34 @@ const FEATURE_COMMAND_DELAY: Duration = Duration::from_millis(100);
 
 bitflags! {
     #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-    pub struct LedPatten: u8 {
+    pub struct LedPattern: u8 {
         const Led1 = 0x1;
         const Led2 = 0x2;
         const Led3 = 0x4;
         const Led4 = 0x8;
+    }
+}
+
+impl Serialize for LedPattern {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_u8(self.bits())
+    }
+}
+
+impl<'de> Deserialize<'de> for LedPattern {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let bits = u8::deserialize(deserializer)?;
+        Self::from_bits(bits).ok_or_else(|| {
+            D::Error::custom(format!(
+                "Invalid LED pattern {bits}; expected a four-bit mask"
+            ))
+        })
     }
 }
 
@@ -141,7 +166,7 @@ impl BluetoothCommunicator {
     pub async fn set_device_led(
         &self,
         device: &ConnectedController,
-        pattern: LedPatten,
+        pattern: LedPattern,
     ) -> btleplug::Result<()> {
         let mut data = [0x00_u8; 8];
         data[0] = pattern.bits();
