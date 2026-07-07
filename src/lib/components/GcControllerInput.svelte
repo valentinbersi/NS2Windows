@@ -1,5 +1,6 @@
 <script lang="ts">
     import type {NsInput} from "../types";
+    import MotionInputBars from "./MotionInputBars.svelte";
 
     export let inputs: Partial<Record<NsInput, number>> = {};
     $: isActive = (input: NsInput) => (inputs[input] || 0) > 0.5;
@@ -92,6 +93,8 @@
         <!-- Start Button -->
         <circle cx="100" cy="55" fill={isActive('Plus') ? 'var(--accent-color)' : '#444'} r="5"/>
     </svg>
+
+    <MotionInputBars {inputs}/>
 </div>
 
 <style>
@@ -100,6 +103,7 @@
         flex-direction: column;
         align-items: center;
         gap: 8px;
+        width: 100%;
     }
 
     .view-label {
