@@ -1,5 +1,6 @@
 <script lang="ts">
     import type {NsInput} from "../types";
+    import MotionInputBars from "./MotionInputBars.svelte";
 
     export let inputs: Partial<Record<NsInput, number>> = {};
     $: isActive = (input: NsInput) => (inputs[input] || 0) > 0.5;
@@ -70,6 +71,8 @@
             </svg>
         </div>
     </div>
+
+    <MotionInputBars {inputs}/>
 </div>
 
 <style>
@@ -78,6 +81,7 @@
         flex-direction: column;
         align-items: center;
         gap: 8px;
+        width: 100%;
     }
 
     .main-views {
