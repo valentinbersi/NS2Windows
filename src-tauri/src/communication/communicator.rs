@@ -5,6 +5,8 @@ use btleplug::api::WriteType;
 use std::time::Duration;
 use tokio::time::sleep;
 
+const FEATURE_COMMAND_DELAY: Duration = Duration::from_millis(100);
+
 bitflags! {
     #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
     pub struct LedPatten: u8 {
@@ -23,7 +25,6 @@ impl BluetoothCommunicator {
         match kind {
             NsControllerKind::LeftJoyCon | NsControllerKind::RightJoyCon => 17,
             NsControllerKind::ProController => 33,
-            // Combined GC rumble commands are disabled until their framing is verified.
             NsControllerKind::NsoGcController => 0,
         }
     }
@@ -44,12 +45,35 @@ impl BluetoothCommunicator {
 
     pub async fn set_feature_mask(&self, device: &ConnectedController) -> btleplug::Result<()> {
         let data = [Self::feature_mask(device.kind()), 0x00, 0x00, 0x00];
-        self.send_generic_command(device, 0x0c, 0x02, &data).await
+        self.send_feature_command(device, 0x02, &data).await
+    }
+
+    pub async fn configure_motion(&self, device: &ConnectedController) -> btleplug::Result<()> {
+        if device.kind() == NsControllerKind::NsoGcController {
+            return Ok(());
+        }
+
+        let data = [0x04, 0x00, 0x00, 0x00, 0x02, 0x02, 0x01, 0x00, 0x8a, 0x00];
+        self.send_feature_command(device, 0x06, &data).await
     }
 
     pub async fn enable_features(&self, device: &ConnectedController) -> btleplug::Result<()> {
         let data = [Self::feature_mask(device.kind()), 0x00, 0x00, 0x00];
-        self.send_generic_command(device, 0x0c, 0x04, &data).await
+        self.send_feature_command(device, 0x04, &data).await
+    }
+
+    async fn send_feature_command(
+        &self,
+        device: &ConnectedController,
+        sub_cmd_id: u8,
+        data: &[u8],
+    ) -> btleplug::Result<()> {
+        self.send_generic_command(device, 0x0c, sub_cmd_id, data)
+            .await?;
+
+        sleep(FEATURE_COMMAND_DELAY).await;
+
+        Ok(())
     }
 
     pub async fn send_generic_command(
@@ -90,7 +114,7 @@ impl BluetoothCommunicator {
                 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x35, 0x00, 0x46, 0x00, 0x00,
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             ],
-            // NSO GameCube rumble is intentionally disabled until the protocol is verified.
+
             NsControllerKind::NsoGcController => return Ok(()),
         };
 
@@ -105,7 +129,6 @@ impl BluetoothCommunicator {
     }
 
     pub async fn emit_sound(&self, device: &ConnectedController) -> btleplug::Result<()> {
-        // Do not send vibration samples to the NSO GameCube controller until its protocol is known.
         if device.kind() == NsControllerKind::NsoGcController {
             return Ok(());
         }

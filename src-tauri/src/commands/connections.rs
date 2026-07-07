@@ -65,6 +65,12 @@ async fn configure_connection(
 
     state
         .communicator
+        .configure_motion(controller)
+        .await
+        .map_err(|err| err.to_string())?;
+
+    state
+        .communicator
         .enable_features(controller)
         .await
         .map_err(|err| err.to_string())?;
