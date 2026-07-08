@@ -88,7 +88,8 @@ export type Output =
 export type Input =
     | { Value: { input: NsInput } }
     | { Grouping: { input: Input } }
-    | { Binary: { left: Input, right: Input, operator: "And" | "Or" } };
+    | { Binary: { left: Input, right: Input, operator: "And" | "Or" } }
+    | { Unary: { input: Input, operator: "Not" } };
 
 export interface Profile {
     name: string;
