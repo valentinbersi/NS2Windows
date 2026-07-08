@@ -110,6 +110,7 @@
                     <div class="operators-container">
                         <button class="operator-btn op-and" on:click={() => insertToken(' and ')}>AND</button>
                         <button class="operator-btn op-or" on:click={() => insertToken(' or ')}>OR</button>
+                        <button class="operator-btn op-not" on:click={() => insertToken(' not ')}>NOT</button>
                         <button class="operator-btn op-paren" on:click={() => insertToken(' ( ')}>(</button>
                         <button class="operator-btn op-paren" on:click={() => insertToken(' ) ')}>)</button>
                     </div>
@@ -324,6 +325,10 @@
         color: #c678dd;
     }
 
+    .op-not {
+        color: #c678dd;
+    }
+
     .op-paren {
         color: #e5c07b;
     }
@@ -333,6 +338,10 @@
     }
 
     .op-or:hover {
+        border-color: #c678dd;
+    }
+
+    .op-not:hover {
         border-color: #c678dd;
     }
 

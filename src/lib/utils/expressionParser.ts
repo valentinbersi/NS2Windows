@@ -6,12 +6,42 @@ class ParserError extends Error {
 
 const VALID_INPUTS = new Set(Object.keys(NS_INPUT_LABELS));
 
+function tokenize(text: string): string[] {
+    const tokens: string[] = [];
+    const regex = /\s+|\(|\)|\band\b|\bor\b|\bnot\b|\w+/gyi;
+
+    let index = 0;
+    while (index < text.length) {
+        regex.lastIndex = index;
+        const match = regex.exec(text);
+
+        if (!match) {
+            throw new ParserError(`Invalid token '${text[index]}'`);
+        }
+
+        const token = match[0];
+        if (!/^\s+$/.test(token)) {
+            tokens.push(token);
+        }
+        index = regex.lastIndex;
+    }
+
+    return tokens;
+}
+
 export function parseExpression(text: string): Input | null {
     if (!text.trim()) return null;
 
-    // Tokenize
-    const regex = /\(|\)|\band\b|\bor\b|\w+/gi;
-    const tokens = text.match(regex) || [];
+    let tokens: string[];
+
+    try {
+        tokens = tokenize(text);
+    } catch (e) {
+        if (e instanceof ParserError) {
+            return null;
+        }
+        throw e;
+    }
 
     let current = 0;
 
@@ -28,15 +58,24 @@ export function parseExpression(text: string): Input | null {
     }
 
     function parseAnd(): Input {
-        let left = parsePrimary();
+        let left = parseUnary();
 
         while (current < tokens.length && tokens[current].toLowerCase() === "and") {
             current++;
-            const right = parsePrimary();
+            const right = parseUnary();
             left = {Binary: {left, right, operator: "And"}};
         }
 
         return left;
+    }
+
+    function parseUnary(): Input {
+        if (current < tokens.length && tokens[current].toLowerCase() === "not") {
+            current++;
+            return {Unary: {input: parseUnary(), operator: "Not"}};
+        }
+
+        return parsePrimary();
     }
 
     function parsePrimary(): Input {
@@ -56,7 +95,7 @@ export function parseExpression(text: string): Input | null {
             return {Grouping: {input: expr}};
         }
 
-        if (token.toLowerCase() === "and" || token.toLowerCase() === "or" || token === ")") {
+        if (token.toLowerCase() === "and" || token.toLowerCase() === "or" || token.toLowerCase() === "not" || token === ")") {
             throw new ParserError(`Unexpected token '${token}'`);
         }
 
@@ -100,6 +139,11 @@ export function stringifyCondition(cond: Input | null | undefined): string {
     if ("Binary" in cond) {
         const op = cond.Binary.operator === "And" ? "and" : "or";
         return `${stringifyCondition(cond.Binary.left)} ${op} ${stringifyCondition(cond.Binary.right)}`;
+    }
+    if ("Unary" in cond) {
+        const input = cond.Unary.input;
+        const inner = stringifyCondition(input);
+        return `not ${"Binary" in input ? `(${inner})` : inner}`;
     }
     return "";
 }
