@@ -1,7 +1,7 @@
 use crate::data::input_data::InputData;
 use crate::data::ns_input::NsInput;
 use crate::dtos::motion_source::MotionSource;
-use bitflags::{bitflags, Flags};
+use bitflags::{Flags, bitflags};
 use maplit::hashmap;
 use std::collections::HashMap;
 use std::ops::{BitAnd, Range};

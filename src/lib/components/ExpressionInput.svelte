@@ -98,13 +98,13 @@
     $: highlightedHtml = highlightText(text);
 
     function highlightText(t: string): string {
-        const tokens = t.split(/(\(|\)|\band\b|\bor\b|\s+)/gi);
+        const tokens = t.split(/(\(|\)|\band\b|\bor\b|\bnot\b|\s+)/gi);
         
         return tokens.map(token => {
             if (!token) return '';
             
             const lower = token.toLowerCase();
-            if (lower === 'and' || lower === 'or') {
+            if (lower === 'and' || lower === 'or' || lower === 'not') {
                 return `<span style="color: #c678dd;">${escapeHtml(token)}</span>`;
             } else if (token === '(' || token === ')') {
                 return `<span style="color: #e5c07b;">${escapeHtml(token)}</span>`;
@@ -153,7 +153,7 @@
         class="real-input"
         spellcheck="false"
         autocomplete="off"
-        placeholder={readonly ? "Unmapped" : "e.g. (A or B) and Y"}
+        placeholder={readonly ? "Unmapped" : "e.g. not (A or B)"}
         {readonly}
     />
 </div>

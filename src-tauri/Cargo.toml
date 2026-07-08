@@ -1,6 +1,6 @@
 [package]
 name = "ns2windows"
-version = "0.10.0"
+version = "0.11.0"
 description = "An application for using Nintendo Switch 2 Controllers on Windows"
 authors = ["Valentín Bersi"]
 edition = "2024"
