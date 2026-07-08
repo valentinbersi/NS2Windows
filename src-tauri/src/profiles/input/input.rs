@@ -1,6 +1,7 @@
 use crate::data::input_data::InputData;
 use crate::profiles::input::binary_input::BinaryInput;
 use crate::profiles::input::grouping_input::GroupingInput;
+use crate::profiles::input::unary_input::UnaryInput;
 use crate::profiles::input::value_input::ValueInput;
 use serde::{Deserialize, Serialize};
 
@@ -9,6 +10,7 @@ pub enum Input {
     Value(ValueInput),
     Grouping(Box<GroupingInput>),
     Binary(Box<BinaryInput>),
+    Unary(Box<UnaryInput>),
 }
 
 impl Input {
@@ -17,6 +19,7 @@ impl Input {
             Input::Value(input) => input.evaluate(data),
             Input::Grouping(input) => input.evaluate(data),
             Input::Binary(input) => input.evaluate(data),
+            Input::Unary(input) => input.evaluate(data),
         }
     }
 }
