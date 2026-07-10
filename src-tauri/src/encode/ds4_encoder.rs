@@ -165,6 +165,8 @@ impl Ds4Encoder {
         }
     }
 
+    const FULL_UNPLUGGED_BATTERY: u8 = 0x0A;
+
     pub fn encode(&self, data: &OutputData) -> Ds4ReportEx {
         let sticks = self.encode_sticks(data);
         let (buttons, special) = self.encode_buttons(data);
@@ -187,6 +189,7 @@ impl Ds4Encoder {
             accel_x: motion.accel_x,
             accel_y: motion.accel_y,
             accel_z: motion.accel_z,
+            battery_lvl_special: Self::FULL_UNPLUGGED_BATTERY,
             ..Default::default()
         };
 
