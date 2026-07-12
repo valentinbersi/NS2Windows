@@ -5,7 +5,7 @@
     import {listen} from "@tauri-apps/api/event";
     import type {Connection, LedPattern as LedPatternValue, NsInput} from "../types";
     import {CONTROLLER_KIND_LABELS, ControllerKind, LedPattern} from "../types";
-    import {addConnection, connections, removeConnection as removeStoredConnection, renameConnection} from "../stores";
+    import {addConnection, connections, removeConnection as removeStoredConnection, renameConnection, virtualControllers} from "../stores";
 
     import JoyConLeftIcon from "./icons/JoyConLeftIcon.svelte";
     import JoyConRightIcon from "./icons/JoyConRightIcon.svelte";
@@ -79,14 +79,35 @@
     async function removeConnection(id: string) {
         if (confirm("Are you sure you want to remove this connection?")) {
             try {
+                const affectedVirtualControllers = $virtualControllers.filter(controller =>
+                    controller.bound_controllers.some(boundController => boundController.id === id)
+                );
+
+                for (const controller of affectedVirtualControllers) {
+                    if (controller.is_running && controller.emulated_controller_id) {
+                        await invoke("stop_controller", {emulatedControllerId: controller.emulated_controller_id});
+                    }
+
+                    virtualControllers.update(controllers => controllers.map(virtualController =>
+                        virtualController.id === controller.id
+                            ? {...virtualController, is_running: false, emulated_controller_id: null}
+                            : virtualController
+                    ));
+                }
+
                 await invoke("disconnect_controller", {id});
                 removeStoredConnection(id);
+                virtualControllers.update(controllers => controllers.map(controller => ({
+                    ...controller,
+                    bound_controllers: controller.bound_controllers.filter(boundController => boundController.id !== id),
+                })));
                 const {[id]: _removed, ...remainingInputs} = controllerInputs;
                 controllerInputs = remainingInputs;
                 const {[id]: _removedPendingLedUpdate, ...remainingPendingLedUpdates} = pendingLedUpdates;
                 pendingLedUpdates = remainingPendingLedUpdates;
             } catch (e) {
                 console.error("Failed to remove connection", e);
+                alert("Failed to remove connection: " + e);
             }
         }
     }
