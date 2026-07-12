@@ -1,10 +1,15 @@
 <script lang="ts">
+    import {onDestroy, onMount} from 'svelte';
+    import {invoke} from '@tauri-apps/api/core';
+    import {listen} from '@tauri-apps/api/event';
+    import type {UnlistenFn} from '@tauri-apps/api/event';
     import Tabs from '$lib/components/Tabs.svelte';
     import ProfilesTab from '$lib/components/ProfilesTab.svelte';
     import ConnectionsTab from '$lib/components/ConnectionsTab.svelte';
     import ControllersTab from '$lib/components/ControllersTab.svelte';
     import ProfileEditor from '$lib/components/ProfileEditor.svelte';
     import SettingsTab from '$lib/components/SettingsTab.svelte';
+    import {removeConnectionWithVirtualControllerCleanup} from '$lib/connectionRemoval';
 
     const TABS = ["Controllers", "Profiles", "Connections", "Settings"];
     let activeTab = "Profiles";
@@ -12,6 +17,24 @@
     // State for Profiles tab
     let editingProfileName: string | null = null;
     let isEditingProfile = false;
+    let unlistenRemoveConnection: UnlistenFn | null = null;
+
+    onMount(async () => {
+        unlistenRemoveConnection = await listen<string>('remove-connection', async event => {
+            await removeConnectionWithVirtualControllerCleanup(event.payload, async () => {
+                try {
+                    await invoke('disconnect_controller', {id: event.payload});
+                } catch (error) {
+                    // The physical connection is already gone; keep local cleanup reliable.
+                    console.warn(`Failed to release disconnected controller ${event.payload}`, error);
+                }
+            });
+        });
+    });
+
+    onDestroy(() => {
+        unlistenRemoveConnection?.();
+    });
 
     function handleTabChange(tab: string) {
         activeTab = tab;

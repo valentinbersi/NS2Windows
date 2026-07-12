@@ -4,18 +4,18 @@ use crate::data::ns_controller_kind::NsControllerKind;
 use crate::decode::decoder::Decoder;
 use crate::state::app_state::AppState;
 use crate::state::ns_controller::NsController;
-use btleplug::api::Peripheral as PeripheralApi;
-use btleplug::platform::Peripheral;
+use btleplug::api::{Central, CentralEvent, Peripheral as PeripheralApi};
+use btleplug::platform::{Adapter, Peripheral};
 use futures::StreamExt;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU16, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 use tauri::async_runtime::JoinHandle;
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::watch;
 use tokio::sync::watch::{Receiver, Sender};
 use tokio::time;
-use tokio::time::{Interval, sleep};
+use tokio::time::{sleep, Interval};
 use uuid::Uuid;
 
 async fn wait_and_connect(
@@ -93,27 +93,40 @@ async fn configure_connection(
 }
 
 async fn start_input_listening(
+    app: AppHandle,
+    id: Uuid,
+    adapter: Adapter,
     controller: Peripheral,
     input_uuid: Uuid,
     sender: Sender<Arc<Vec<u8>>>,
 ) -> Result<JoinHandle<()>, String> {
-    let notifications = controller
+    let mut adapter_events = adapter.events().await.map_err(|err| err.to_string())?;
+    let mut notifications = controller
         .notifications()
         .await
         .map_err(|err| err.to_string())?;
+    let peripheral_id = controller.id();
 
     let input_listener = tauri::async_runtime::spawn(async move {
-        notifications
-            .filter(|notification| {
-                let notification_uuid = notification.uuid;
-                async move { notification_uuid == input_uuid }
-            })
-            .map(|notification| notification.value)
-            .map(Arc::new)
-            .for_each(|buffer| async {
-                let _ = sender.send(buffer);
-            })
-            .await;
+        loop {
+            tokio::select! {
+                notification = notifications.next() => match notification {
+                    Some(notification) if notification.uuid == input_uuid => {
+                        let _ = sender.send(Arc::new(notification.value));
+                    }
+                    Some(_) => {}
+                    None => break,
+                },
+
+                adapter_event = adapter_events.next() => match adapter_event {
+                    Some(CentralEvent::DeviceDisconnected(disconnected_id)) if disconnected_id == peripheral_id => break,
+                    Some(_) => {}
+                    None => break,
+                }
+            }
+        }
+
+        let _ = app.emit("remove-connection", id);
     });
 
     Ok(input_listener)
@@ -189,8 +202,15 @@ pub async fn connect_controller(
     configure_connection(&state, &app, &id, &device).await?;
 
     let (sender, receiver) = watch::channel(Arc::new(vec![]));
-    let input_listener =
-        start_input_listening(device.controller(), device.input_uuid(), sender).await?;
+    let input_listener = start_input_listening(
+        app.clone(),
+        id,
+        state.connector.adapter(),
+        device.controller(),
+        device.input_uuid(),
+        sender,
+    )
+    .await?;
 
     let input_reporter = start_input_reporting(&state, app, id, device.kind(), receiver);
 
