@@ -1,9 +1,9 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
-    import { ControllerKind, ProfileKind, CONTROLLER_KIND_LABELS } from "../types";
+    import { ControllerKind } from "../types";
     import type { Connection, VirtualControllerState, EmulatedController } from "../types";
-    import { connections, virtualControllers } from "../stores";
+    import { connections, renameConnection, virtualControllers } from "../stores";
     
     import JoyConLeftIcon from "./icons/JoyConLeftIcon.svelte";
     import JoyConRightIcon from "./icons/JoyConRightIcon.svelte";
@@ -11,7 +11,8 @@
     import GcControllerIcon from "./icons/GcControllerIcon.svelte";
 
     let profiles: string[] = [];
-    let loading = true;
+    let nameDrafts: Record<string, string> = {};
+    let nameErrors: Record<string, string> = {};
 
     // Selection state
     let selectingForVcId: string | null = null;
@@ -21,8 +22,6 @@
             profiles = await invoke<string[]>("profile_names");
         } catch (e) {
             console.error("Failed to load profiles", e);
-        } finally {
-            loading = false;
         }
     }
 
@@ -33,6 +32,49 @@
     $: availableConnections = $connections.filter(
         c => !$virtualControllers.some(vc => vc.bound_controllers.some(bc => bc.id === c.id))
     );
+
+    function clearNameDraft(id: string) {
+        const {[id]: _draft, ...remainingDrafts} = nameDrafts;
+        const {[id]: _error, ...remainingErrors} = nameErrors;
+        nameDrafts = remainingDrafts;
+        nameErrors = remainingErrors;
+    }
+
+    function updateNameDraft(id: string, event: Event) {
+        nameDrafts = {
+            ...nameDrafts,
+            [id]: (event.currentTarget as HTMLInputElement).value,
+        };
+
+        if (nameErrors[id]) {
+            const {[id]: _error, ...remainingErrors} = nameErrors;
+            nameErrors = remainingErrors;
+        }
+    }
+
+    function commitControllerName(connection: Connection) {
+        const result = renameConnection(connection.id, nameDrafts[connection.id] ?? connection.name);
+
+        if (result.ok) {
+            clearNameDraft(connection.id);
+            return;
+        }
+
+        nameErrors = {...nameErrors, [connection.id]: result.error};
+    }
+
+    function handleNameKeydown(connection: Connection, event: KeyboardEvent) {
+        const input = event.currentTarget as HTMLInputElement;
+
+        if (event.key === "Enter") {
+            event.preventDefault();
+            input.blur();
+        } else if (event.key === "Escape") {
+            event.preventDefault();
+            clearNameDraft(connection.id);
+            input.blur();
+        }
+    }
 
     function addVirtualController() {
         const newVc: VirtualControllerState = {
@@ -174,15 +216,33 @@
         <h3>Connected Devices</h3>
         <p class="subtitle">Overview of available controllers</p>
         <div class="connections-list">
-            {#if loading}
-                <div class="empty-msg">Loading...</div>
-            {:else if availableConnections.length === 0}
-                <div class="empty-msg">No controllers available. Please connect one first.</div>
+            {#if $connections.length === 0}
+                <div class="empty-msg">No controllers connected. Please connect one first.</div>
             {:else}
-                {#each availableConnections as conn (conn.id)}
+                {#each $connections as conn (conn.id)}
                     <div class="connection-item">
                         <svelte:component this={getControllerIcon(conn.controller_kind)} width="24" height="24" />
-                        <span>{CONTROLLER_KIND_LABELS[conn.controller_kind]}</span>
+                        <div class="connection-name-field">
+                            <input
+                                class="controller-name-input"
+                                class:invalid={Boolean(nameErrors[conn.id])}
+                                value={nameDrafts[conn.id] ?? conn.name}
+                                title="Edit controller name"
+                                aria-label={`Name for ${conn.name}`}
+                                aria-invalid={Boolean(nameErrors[conn.id])}
+                                aria-describedby={nameErrors[conn.id] ? `controller-name-error-${conn.id}` : undefined}
+                                on:input={(event) => updateNameDraft(conn.id, event)}
+                                on:blur={() => commitControllerName(conn)}
+                                on:keydown={(event) => handleNameKeydown(conn, event)}
+                            />
+                            {#if nameErrors[conn.id]}
+                                <span
+                                    id={`controller-name-error-${conn.id}`}
+                                    class="controller-name-error"
+                                    role="alert"
+                                >{nameErrors[conn.id]}</span>
+                            {/if}
+                        </div>
                     </div>
                 {/each}
             {/if}
@@ -224,7 +284,7 @@
                             {#each vc.bound_controllers as bound (bound.id)}
                                 <div class="bound-controller">
                                     <svelte:component this={getControllerIcon(bound.controller_kind)} width="48" height="48" />
-                                    <span class="label">{CONTROLLER_KIND_LABELS[bound.controller_kind]}</span>
+                                    <span class="label">{bound.name}</span>
                                     {#if !vc.is_running}
                                         <button class="unbind-btn" on:click={() => unbindController(vc.id, bound.id)}>✕</button>
                                     {/if}
@@ -298,7 +358,7 @@
                         <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
                         <div class="modal-card" on:click={() => selectControllerForVc(conn)}>
                             <svelte:component this={getControllerIcon(conn.controller_kind)} width="48" height="48" />
-                            <span>{CONTROLLER_KIND_LABELS[conn.controller_kind]}</span>
+                            <span>{conn.name}</span>
                         </div>
                     {/each}
                 {/if}
@@ -356,7 +416,7 @@
 
     .connection-item {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 12px;
         padding: 12px 16px;
         background: var(--bg-color);
@@ -364,10 +424,50 @@
         border-radius: 8px;
     }
 
-    .connection-item span {
+    .connection-item :global(svg) {
+        margin-top: 7px;
+        flex-shrink: 0;
+    }
+
+    .connection-name-field {
+        display: flex;
+        flex: 1;
+        min-width: 0;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .controller-name-input {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+        padding: 6px 8px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        outline: none;
+        background: transparent;
         font-size: 14px;
         font-weight: 500;
         color: var(--text-color);
+    }
+
+    .controller-name-input:hover {
+        border-color: var(--border-color);
+    }
+
+    .controller-name-input:focus {
+        border-color: var(--accent-color);
+        background: var(--bg-surface);
+    }
+
+    .controller-name-input.invalid {
+        border-color: var(--danger-color, #ff4444);
+    }
+
+    .controller-name-error {
+        color: var(--danger-color, #ff4444);
+        font-size: 11px;
+        line-height: 1.3;
     }
 
     .main-panel {

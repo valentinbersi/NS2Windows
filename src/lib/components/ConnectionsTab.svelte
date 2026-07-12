@@ -3,9 +3,9 @@
     import {invoke} from "@tauri-apps/api/core";
     import type {UnlistenFn} from "@tauri-apps/api/event";
     import {listen} from "@tauri-apps/api/event";
-    import type {LedPattern as LedPatternValue, NsInput} from "../types";
+    import type {Connection, LedPattern as LedPatternValue, NsInput} from "../types";
     import {CONTROLLER_KIND_LABELS, ControllerKind, LedPattern} from "../types";
-    import {connections} from "../stores";
+    import {addConnection, connections, removeConnection as removeStoredConnection, renameConnection} from "../stores";
 
     import JoyConLeftIcon from "./icons/JoyConLeftIcon.svelte";
     import JoyConRightIcon from "./icons/JoyConRightIcon.svelte";
@@ -25,6 +25,8 @@
 
     let controllerInputs: Record<string, Partial<Record<NsInput, number>>> = {};
     let pendingLedUpdates: Record<string, boolean> = {};
+    let nameDrafts: Record<string, string> = {};
+    let nameErrors: Record<string, string> = {};
 
     const DEFAULT_LED_PATTERN = LedPattern.Led1;
     const LED_OPTIONS: {index: number; flag: LedPatternValue}[] = [
@@ -78,7 +80,7 @@
         if (confirm("Are you sure you want to remove this connection?")) {
             try {
                 await invoke("disconnect_controller", {id});
-                connections.update(conns => conns.filter(c => c.id !== id));
+                removeStoredConnection(id);
                 const {[id]: _removed, ...remainingInputs} = controllerInputs;
                 controllerInputs = remainingInputs;
                 const {[id]: _removedPendingLedUpdate, ...remainingPendingLedUpdates} = pendingLedUpdates;
@@ -101,11 +103,11 @@
                 throw new Error("The connected controller type was not reported by the backend.");
             }
 
-            connections.update(conns => [...conns, {
+            addConnection({
                 id: newId,
                 controller_kind: controllerKind,
                 led_pattern: DEFAULT_LED_PATTERN,
-            }]);
+            });
             delete detectedKinds[newId];
             detectedKinds = detectedKinds;
             resetConnectionState();
@@ -137,6 +139,49 @@
         } finally {
             const {[id]: _finished, ...remainingPendingLedUpdates} = pendingLedUpdates;
             pendingLedUpdates = remainingPendingLedUpdates;
+        }
+    }
+
+    function clearNameDraft(id: string) {
+        const {[id]: _draft, ...remainingDrafts} = nameDrafts;
+        const {[id]: _error, ...remainingErrors} = nameErrors;
+        nameDrafts = remainingDrafts;
+        nameErrors = remainingErrors;
+    }
+
+    function updateNameDraft(id: string, event: Event) {
+        nameDrafts = {
+            ...nameDrafts,
+            [id]: (event.currentTarget as HTMLInputElement).value,
+        };
+
+        if (nameErrors[id]) {
+            const {[id]: _error, ...remainingErrors} = nameErrors;
+            nameErrors = remainingErrors;
+        }
+    }
+
+    function commitControllerName(connection: Connection) {
+        const result = renameConnection(connection.id, nameDrafts[connection.id] ?? connection.name);
+
+        if (result.ok) {
+            clearNameDraft(connection.id);
+            return;
+        }
+
+        nameErrors = {...nameErrors, [connection.id]: result.error};
+    }
+
+    function handleNameKeydown(connection: Connection, event: KeyboardEvent) {
+        const input = event.currentTarget as HTMLInputElement;
+
+        if (event.key === "Enter") {
+            event.preventDefault();
+            input.blur();
+        } else if (event.key === "Escape") {
+            event.preventDefault();
+            clearNameDraft(connection.id);
+            input.blur();
         }
     }
 
@@ -177,8 +222,25 @@
                             <svelte:component this={getIconForKind(connection.controller_kind)} width="32" height="32"/>
                         </div>
                         <div class="connection-info">
-                            <span class="controller-name">{CONTROLLER_KIND_LABELS[connection.controller_kind]}</span>
-                            <!-- span class="controller-id">ID: {connection.id.split('-')[0]}...</--span !-->
+                            <input
+                                class="controller-name-input"
+                                class:invalid={Boolean(nameErrors[connection.id])}
+                                value={nameDrafts[connection.id] ?? connection.name}
+                                title="Edit controller name"
+                                aria-label={`Name for ${connection.name}`}
+                                aria-invalid={Boolean(nameErrors[connection.id])}
+                                aria-describedby={nameErrors[connection.id] ? `controller-name-error-${connection.id}` : undefined}
+                                on:input={(event) => updateNameDraft(connection.id, event)}
+                                on:blur={() => commitControllerName(connection)}
+                                on:keydown={(event) => handleNameKeydown(connection, event)}
+                            />
+                            {#if nameErrors[connection.id]}
+                                <span
+                                    id={`controller-name-error-${connection.id}`}
+                                    class="controller-name-error"
+                                    role="alert"
+                                >{nameErrors[connection.id]}</span>
+                            {/if}
                         </div>
                         <div class="connection-actions">
                             <button class="action-btn delete-btn" title="Remove Connection"
@@ -303,7 +365,7 @@
 
     .connection-card-header {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 16px;
     }
 
@@ -316,6 +378,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        margin-top: 7px;
     }
 
     .connection-info {
@@ -325,10 +388,37 @@
         gap: 4px;
     }
 
-    .controller-name {
+    .controller-name-input {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+        padding: 6px 8px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        outline: none;
+        background: transparent;
         font-size: 15px;
         font-weight: 500;
         color: var(--text-color);
+    }
+
+    .controller-name-input:hover {
+        border-color: var(--border-color);
+    }
+
+    .controller-name-input:focus {
+        border-color: var(--accent-color);
+        background: var(--bg-color);
+    }
+
+    .controller-name-input.invalid {
+        border-color: var(--danger-color, #ff4444);
+    }
+
+    .controller-name-error {
+        color: var(--danger-color, #ff4444);
+        font-size: 11px;
+        line-height: 1.3;
     }
 
     /*.controller-id {*/

@@ -41,6 +41,8 @@ export interface Connection {
     id: string;
     controller_kind: ControllerKind;
     led_pattern: LedPattern;
+    name: string;
+    is_custom_name: boolean;
 }
 
 export interface SingleController {
