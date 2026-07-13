@@ -64,6 +64,10 @@ impl BluetoothConnector {
         Self { adapter }
     }
 
+    pub fn adapter(&self) -> Adapter {
+        self.adapter.clone()
+    }
+
     async fn scan_devices(&self) -> Result<Peripheral, ConnectorError> {
         let mut events = self.adapter.events().await?;
 
