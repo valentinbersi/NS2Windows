@@ -1,6 +1,9 @@
+use crate::data::ns_input::NsInput;
 use crate::data::output::Output;
+use crate::entities::profile_kind_type::ProfileKindType;
 use crate::entities::{condition, profile};
 use crate::profiles::input::input::Input;
+use crate::profiles::input::value_input::ValueInput;
 use crate::profiles::profile::Profile;
 use crate::repositories::repository_error::RepositoryError;
 use sea_orm::{
@@ -14,9 +17,221 @@ pub struct ProfileRepository {
     db: DatabaseConnection,
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::data::profile_kind::ProfileKind;
+    use migration::{Migrator, MigratorTrait};
+    use sea_orm::{ConnectionTrait, Database};
+    use std::collections::HashMap;
+
+    #[tokio::test]
+    async fn xbox_motion_upgrade_preserves_profiles_and_runs_once() {
+        let path = std::env::temp_dir().join(format!("ns2windows-motion-{}.db", Uuid::new_v4()));
+        std::fs::File::create(&path).unwrap();
+        let db = Database::connect(format!("sqlite://{}", path.to_string_lossy()))
+            .await
+            .unwrap();
+        Migrator::up(&db, None).await.unwrap();
+        let repository = ProfileRepository::new(db.clone());
+        let custom = Input::Value(ValueInput::new(NsInput::GyroYawLeft));
+        repository
+            .save_profile(Profile::new(
+                "Xbox custom".into(),
+                ProfileKind::Xbox360,
+                [
+                    (Output::GyroPitchUp, custom.clone()),
+                    (Output::CrossA, Input::Value(ValueInput::new(NsInput::B))),
+                ]
+                .into_iter()
+                .collect(),
+            ))
+            .await
+            .unwrap();
+        repository
+            .save_profile(Profile::new(
+                "PS4 unchanged".into(),
+                ProfileKind::Ps4,
+                HashMap::new(),
+            ))
+            .await
+            .unwrap();
+        let original = profile::Entity::find()
+            .filter(profile::Column::Name.eq("Xbox custom"))
+            .one(&db)
+            .await
+            .unwrap()
+            .unwrap();
+        let conditions_before = condition::Entity::find()
+            .filter(condition::Column::ProfileId.eq(original.id))
+            .all(&db)
+            .await
+            .unwrap();
+        assert!(
+            repository
+                .backfill_xbox_motion_defaults(false)
+                .await
+                .unwrap()
+        );
+        let upgraded = repository
+            .find_profile_by_name("Xbox custom")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(upgraded.outputs.len(), 13);
+        assert_eq!(upgraded.outputs[&Output::GyroPitchUp], custom);
+        assert_eq!(
+            upgraded.outputs[&Output::AccelRight],
+            Input::Value(ValueInput::new(NsInput::AccelRight))
+        );
+        let after = profile::Entity::find()
+            .filter(profile::Column::Name.eq("Xbox custom"))
+            .one(&db)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(after, original);
+        for before in conditions_before {
+            assert_eq!(
+                condition::Entity::find_by_id(before.id)
+                    .one(&db)
+                    .await
+                    .unwrap()
+                    .unwrap(),
+                before
+            );
+        }
+        assert!(
+            repository
+                .find_profile_by_name("PS4 unchanged")
+                .await
+                .unwrap()
+                .unwrap()
+                .outputs
+                .is_empty()
+        );
+        // Retry after an interrupted marker save adds no duplicate mappings.
+        repository
+            .backfill_xbox_motion_defaults(false)
+            .await
+            .unwrap();
+        assert_eq!(
+            condition::Entity::find()
+                .filter(condition::Column::ProfileId.eq(original.id))
+                .all(&db)
+                .await
+                .unwrap()
+                .len(),
+            13
+        );
+        condition::Entity::delete_many()
+            .filter(condition::Column::ProfileId.eq(original.id))
+            .filter(
+                condition::Column::Output
+                    .eq(crate::entities::out_input_type::OutputType::AccelRight),
+            )
+            .exec(&db)
+            .await
+            .unwrap();
+        assert!(
+            !repository
+                .backfill_xbox_motion_defaults(true)
+                .await
+                .unwrap()
+        );
+        assert!(
+            !repository
+                .find_profile_by_name("Xbox custom")
+                .await
+                .unwrap()
+                .unwrap()
+                .outputs
+                .contains_key(&Output::AccelRight)
+        );
+        drop(repository);
+        db.close().await.unwrap();
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[tokio::test]
+    async fn backfill_is_transactional_on_failure() {
+        let db = Database::connect("sqlite::memory:").await.unwrap();
+        Migrator::up(&db, None).await.unwrap();
+        let repository = ProfileRepository::new(db.clone());
+        repository
+            .save_profile(Profile::new(
+                "Xbox".into(),
+                ProfileKind::Xbox360,
+                HashMap::new(),
+            ))
+            .await
+            .unwrap();
+        // Fail after at least one output has been inserted in the transaction.
+        db.execute_unprepared("CREATE TRIGGER fail_motion BEFORE INSERT ON conditions WHEN NEW.output = 'GyroPitchUp' BEGIN SELECT RAISE(ABORT, 'test failure'); END;").await.unwrap();
+        assert!(
+            repository
+                .backfill_xbox_motion_defaults(false)
+                .await
+                .is_err()
+        );
+        assert!(condition::Entity::find().all(&db).await.unwrap().is_empty());
+    }
+}
+
 impl ProfileRepository {
     pub fn new(db: DatabaseConnection) -> Self {
         Self { db }
+    }
+
+    /// One-time data upgrade, gated by the persisted settings marker. The
+    /// transaction is idempotent if saving that marker fails after commit.
+    pub async fn backfill_xbox_motion_defaults(
+        &self,
+        completed: bool,
+    ) -> Result<bool, RepositoryError> {
+        if completed {
+            return Ok(false);
+        }
+        let txn = self.db.begin().await?;
+        let profiles = profile::Entity::find()
+            .filter(profile::Column::Kind.eq(ProfileKindType::Xbox360))
+            .all(&txn)
+            .await?;
+        for profile in profiles {
+            let existing = condition::Entity::find()
+                .filter(condition::Column::ProfileId.eq(profile.id))
+                .all(&txn)
+                .await?;
+            for (output, input) in [
+                (Output::AccelUp, NsInput::AccelUp),
+                (Output::AccelDown, NsInput::AccelDown),
+                (Output::AccelLeft, NsInput::AccelLeft),
+                (Output::AccelRight, NsInput::AccelRight),
+                (Output::AccelForward, NsInput::AccelForward),
+                (Output::AccelBackward, NsInput::AccelBackward),
+                (Output::GyroPitchUp, NsInput::GyroPitchUp),
+                (Output::GyroPitchDown, NsInput::GyroPitchDown),
+                (Output::GyroRollLeft, NsInput::GyroRollLeft),
+                (Output::GyroRollRight, NsInput::GyroRollRight),
+                (Output::GyroYawLeft, NsInput::GyroYawLeft),
+                (Output::GyroYawRight, NsInput::GyroYawRight),
+            ] {
+                if !existing
+                    .iter()
+                    .any(|condition| condition.output == output.into())
+                {
+                    self.save_condition(
+                        &txn,
+                        output,
+                        Input::Value(ValueInput::new(input)),
+                        profile.id,
+                    )
+                    .await?;
+                }
+            }
+        }
+        txn.commit().await?;
+        Ok(true)
     }
 
     async fn save_condition(

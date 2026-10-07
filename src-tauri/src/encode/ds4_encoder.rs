@@ -16,6 +16,43 @@ struct StickData {
     ry: u8,
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use maplit::hashmap;
+
+    #[test]
+    fn cemuhook_mode_suppresses_only_motion() {
+        let output = OutputData::new(hashmap! {
+            Output::CrossA => 1.0, Output::LeftXPlus => 0.5, Output::R2Rt => 0.7,
+            Output::GyroPitchUp => 20.0, Output::GyroYawLeft => 30.0,
+            Output::GyroRollRight => 40.0, Output::AccelRight => 50.0,
+            Output::AccelDown => 60.0, Output::AccelForward => 70.0,
+        });
+        // Both encoder calls initialize the report member of the ViGEm union.
+        let vigem = unsafe { Ds4Encoder.encode(&output).report };
+        let cemuhook = unsafe { Ds4Encoder.encode_with_motion(&output, false).report };
+        let motion = [
+            cemuhook.gyro_x,
+            cemuhook.gyro_y,
+            cemuhook.gyro_z,
+            cemuhook.accel_x,
+            cemuhook.accel_y,
+            cemuhook.accel_z,
+        ];
+        assert_eq!(motion, [0; 6]);
+        let gyro_x = vigem.gyro_x;
+        let accel_z = vigem.accel_z;
+        assert_ne!(gyro_x, 0);
+        assert_ne!(accel_z, 0);
+        let buttons = cemuhook.buttons;
+        let other_buttons = vigem.buttons;
+        assert_eq!(buttons, other_buttons);
+        assert_eq!(cemuhook.thumb_lx, vigem.thumb_lx);
+        assert_eq!(cemuhook.trigger_r, vigem.trigger_r);
+    }
+}
+
 impl Ds4Encoder {
     const STICK_CENTER: f32 = 128_f32;
 
@@ -168,11 +205,26 @@ impl Ds4Encoder {
     const FULL_UNPLUGGED_BATTERY: u8 = 0x0A;
 
     pub fn encode(&self, data: &OutputData) -> Ds4ReportEx {
+        self.encode_with_motion(data, true)
+    }
+
+    pub fn encode_with_motion(&self, data: &OutputData, report_motion: bool) -> Ds4ReportEx {
         let sticks = self.encode_sticks(data);
         let (buttons, special) = self.encode_buttons(data);
         let d_pad = self.encode_d_pad(data);
         let trigger = self.encode_triggers(data);
-        let motion = self.encode_motion(data);
+        let motion = if report_motion {
+            self.encode_motion(data)
+        } else {
+            MotionData {
+                gyro_x: 0,
+                gyro_y: 0,
+                gyro_z: 0,
+                accel_x: 0,
+                accel_y: 0,
+                accel_z: 0,
+            }
+        };
 
         let mut report = Ds4ReportExData {
             thumb_lx: sticks.lx,

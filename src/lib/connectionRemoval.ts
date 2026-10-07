@@ -49,6 +49,7 @@ export function removeConnectionWithVirtualControllerCleanup(
                     ...controller,
                     bound_controllers: controller.bound_controllers.filter(boundController => boundController.id !== id),
                     is_running: false,
+                    is_busy: false,
                     emulated_controller_id: null,
                 }
                 : controller;

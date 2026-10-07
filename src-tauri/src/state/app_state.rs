@@ -1,3 +1,4 @@
+use crate::cemuhook::CemuHookServer;
 use crate::communication::communicator::BluetoothCommunicator;
 use crate::connection::connector::BluetoothConnector;
 use crate::repositories::profile_repository::ProfileRepository;
@@ -17,6 +18,7 @@ pub struct AppState {
     pub communicator: BluetoothCommunicator,
 
     pub vigem_client: Client,
+    pub cemuhook: Arc<CemuHookServer>,
 
     pub display_frequency: Arc<AtomicU16>, // The frequency of the input display (in Hz)
     pub emulation_frequency: Arc<AtomicU16>, // The frequency of the emulation (in Hz)
@@ -33,12 +35,14 @@ impl AppState {
         vigem: Client,
         display_frequency: Arc<AtomicU16>,
         emulation_frequency: Arc<AtomicU16>,
+        cemuhook: Arc<CemuHookServer>,
     ) -> Self {
         Self {
             profile_repository,
             connector,
             communicator,
             vigem_client: vigem,
+            cemuhook,
             display_frequency,
             emulation_frequency,
             connected_controllers: Default::default(),
@@ -73,7 +77,13 @@ impl AppState {
     }
 
     pub async fn remove_connected_controller(&self, id: &Uuid) -> btleplug::Result<Option<()>> {
-        let controller = self.connected_controllers.write().await.remove(id);
+        let mut connected = self.connected_controllers.write().await;
+        let controller = connected.remove(id);
+        self.emulated_controllers
+            .write()
+            .await
+            .retain(|_, task| !task.uses(id));
+        drop(connected);
 
         match controller {
             None => Ok(None),
@@ -84,12 +94,25 @@ impl AppState {
         }
     }
 
-    pub async fn insert_emulated_controller(&self, id: Uuid, controller: EmulatedControllerTask) {
+    pub async fn insert_emulated_controller(
+        &self,
+        id: Uuid,
+        controller: EmulatedControllerTask,
+    ) -> Result<(), String> {
+        let connected = self.connected_controllers.read().await;
+        if controller
+            .physical_ids()
+            .iter()
+            .any(|id| !connected.contains_key(id))
+        {
+            return Err("A bound controller disconnected while starting emulation.".into());
+        }
         self.emulated_controllers
             .write()
             .await
             .entry(id)
             .insert_entry(controller);
+        Ok(())
     }
 
     pub async fn remove_emulated_controller(&self, id: &Uuid) -> Option<()> {
@@ -101,6 +124,7 @@ impl AppState {
     }
 
     pub async fn cleanup(&self) -> Result<(), String> {
+        self.emulated_controllers.write().await.clear();
         for controller in self.connected_controllers.read().await.values() {
             controller
                 .disconnect()

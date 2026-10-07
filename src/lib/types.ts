@@ -62,7 +62,10 @@ export type NsConnectedController =
 export interface EmulatedController {
     profile_name: string;
     connected_controller: NsConnectedController;
+    motion_output: MotionOutput;
 }
+
+export type MotionOutput = "ViGEm" | "CemuHook";
 
 export type NsInput =
     | "B" | "A" | "Y" | "X" | "Home" | "Capture" | "Chat"
@@ -681,19 +684,19 @@ export const XBOX360_OUTPUT_LABELS: Record<Output, string | null> = {
     RightXPlus: "Right Stick Right",
     RightYMinus: "Right Stick Down",
     RightYPlus: "Right Stick Up",
-    // Motion not used for Xbox360
-    AccelUp: null,
-    AccelDown: null,
-    AccelLeft: null,
-    AccelRight: null,
-    AccelForward: null,
-    AccelBackward: null,
-    GyroPitchUp: null,
-    GyroPitchDown: null,
-    GyroRollLeft: null,
-    GyroRollRight: null,
-    GyroYawLeft: null,
-    GyroYawRight: null,
+    // Motion is reported separately through CemuHook.
+    AccelUp: "Accel Up",
+    AccelDown: "Accel Down",
+    AccelLeft: "Accel Left",
+    AccelRight: "Accel Right",
+    AccelForward: "Accel Forward",
+    AccelBackward: "Accel Backward",
+    GyroPitchUp: "Gyro Pitch Up",
+    GyroPitchDown: "Gyro Pitch Down",
+    GyroRollLeft: "Gyro Roll Left",
+    GyroRollRight: "Gyro Roll Right",
+    GyroYawLeft: "Gyro Yaw Left",
+    GyroYawRight: "Gyro Yaw Right",
 };
 
 export interface VirtualControllerState {
@@ -701,6 +704,8 @@ export interface VirtualControllerState {
     profile_name: string | null;
     bound_controllers: Connection[];
     is_running: boolean;
+    is_busy: boolean;
     emulated_controller_id: string | null; // Backend UUID when running
     motion_source: "Left" | "Right"; // For Dual Joy-Con
+    motion_output: MotionOutput;
 }

@@ -1,10 +1,15 @@
 <script lang="ts">
     import {onMount} from "svelte";
     import {invoke} from "@tauri-apps/api/core";
-    import {load, Store} from "@tauri-apps/plugin-store";
+    import {load, type Store} from "@tauri-apps/plugin-store";
+    import {DEFAULT_CEMUHOOK_ADDRESS, DEFAULT_CEMUHOOK_PORT, validateCemuHookSettings} from "../cemuhookSettings";
 
     let displayFrequency: number = 60;
     let emulationFrequency: number = 60;
+    let cemuhookAddress = DEFAULT_CEMUHOOK_ADDRESS;
+    let cemuhookPort: number = DEFAULT_CEMUHOOK_PORT;
+    let errors: string[] = [];
+    let applied = false;
     let loading = true;
     let saving = false;
 
@@ -12,6 +17,8 @@
 
     async function loadSettings() {
         loading = true;
+        errors = [];
+        applied = false;
         try {
             if (!store) {
                 store = await load("settings.json");
@@ -25,8 +32,11 @@
             if (ef !== null && ef !== undefined) {
                 emulationFrequency = ef;
             }
+            cemuhookAddress = await store.get<string>("cemuhook_address") ?? DEFAULT_CEMUHOOK_ADDRESS;
+            cemuhookPort = await store.get<number>("cemuhook_port") ?? DEFAULT_CEMUHOOK_PORT;
         } catch (e) {
             console.error("Failed to load settings", e);
+            errors = ["Failed to load settings: " + e];
         } finally {
             loading = false;
         }
@@ -37,13 +47,34 @@
     });
 
     async function applySettings() {
+        if (saving) return;
         saving = true;
+        errors = [];
+        applied = false;
         try {
-            await invoke("update_display_frequency", {newFrequency: displayFrequency});
-            await invoke("update_emulation_frequency", {newFrequency: emulationFrequency});
+            const updates = [
+                {label: "Input display frequency", valid: Number.isInteger(displayFrequency) && displayFrequency >= 1 && displayFrequency <= 65535,
+                    apply: () => invoke("update_display_frequency", {newFrequency: displayFrequency})},
+                {label: "Controller emulation frequency", valid: Number.isInteger(emulationFrequency) && emulationFrequency >= 1 && emulationFrequency <= 65535,
+                    apply: () => invoke("update_emulation_frequency", {newFrequency: emulationFrequency})},
+            ];
+            // Apply separately: a blocked endpoint change must not prevent
+            // changing emulation/display frequency, and vice versa.
+            for (const update of updates) {
+                if (!update.valid) { errors = [...errors, `${update.label} must be an integer between 1 and 65535.`]; continue; }
+                try { await update.apply(); } catch (error) { errors = [...errors, `${update.label}: ${error}`]; }
+            }
+            const endpointError = validateCemuHookSettings(cemuhookAddress, cemuhookPort);
+            if (endpointError) errors = [...errors, endpointError];
+            else {
+                try {
+                    await invoke("update_cemuhook_settings", {address: cemuhookAddress.trim(), port: cemuhookPort});
+                } catch (error) { errors = [...errors, `CemuHook: ${error}`]; }
+            }
+            applied = errors.length === 0;
         } catch (e) {
             console.error("Failed to apply settings", e);
-            alert("Failed to apply settings: " + e);
+            errors = [...errors, "Failed to apply settings: " + e];
         } finally {
             saving = false;
         }
@@ -56,16 +87,18 @@
     function restoreDefault() {
         displayFrequency = 60;
         emulationFrequency = 60;
+        cemuhookAddress = DEFAULT_CEMUHOOK_ADDRESS;
+        cemuhookPort = DEFAULT_CEMUHOOK_PORT;
+        errors = [];
+        applied = false;
     }
 
     function handleDisplayFrequencyInput(e: Event) {
-        const val = parseInt((e.target as HTMLInputElement).value);
-        if (!isNaN(val)) displayFrequency = val;
+        displayFrequency = (e.target as HTMLInputElement).valueAsNumber;
     }
 
     function handleEmulationFrequencyInput(e: Event) {
-        const val = parseInt((e.target as HTMLInputElement).value);
-        if (!isNaN(val)) emulationFrequency = val;
+        emulationFrequency = (e.target as HTMLInputElement).valueAsNumber;
     }
 
 </script>
@@ -86,6 +119,8 @@
                         id="display-frequency"
                         type="number"
                         min="1"
+                        max="65535"
+                        disabled={saving}
                         step="1"
                         value={displayFrequency}
                         on:input={handleDisplayFrequencyInput}
@@ -99,6 +134,8 @@
                         id="emulation-frequency"
                         type="number"
                         min="1"
+                        max="65535"
+                        disabled={saving}
                         step="1"
                         value={emulationFrequency}
                         on:input={handleEmulationFrequencyInput}
@@ -106,6 +143,25 @@
                 <span class="help-text">How often the emulated controller sends inputs to the system.</span>
             </div>
 
+            <div class="form-group">
+                <label for="cemuhook-address">CemuHook Bind Address</label>
+                <input id="cemuhook-address" type="text" bind:value={cemuhookAddress} disabled={saving} spellcheck="false" />
+                <span class="help-text">Use 127.0.0.1 for emulators on this PC, or a local network address for LAN clients. Stop all CemuHook controllers before changing the address or port.</span>
+            </div>
+            <div class="form-group">
+                <label for="cemuhook-port">CemuHook Port</label>
+                <input id="cemuhook-port" type="number" min="1" max="65535" step="1" value={cemuhookPort}
+                    on:input={(event) => cemuhookPort = event.currentTarget.valueAsNumber} disabled={saving} />
+                <span class="help-text">Set the same address and port in your emulator’s CemuHook/DSU client. Default port: 26760.</span>
+            </div>
+            {#if errors.length > 0}
+                <div class="settings-errors" role="alert">
+                    {#each errors as error}<p>{error}</p>{/each}
+                    <p>Other valid settings were applied.</p>
+                </div>
+            {:else if applied}
+                <p role="status">Settings applied.</p>
+            {/if}
             <div class="actions">
                 <button class="secondary" on:click={restoreDefault} disabled={saving}>Restore to Default</button>
                 <button class="secondary" on:click={restoreCurrent} disabled={saving}>Restore to Current</button>
@@ -118,6 +174,7 @@
 </div>
 
 <style>
+    .settings-errors { color: var(--error-color, #f87171); font-size: 14px; }
     .tab-container {
         padding: 24px 32px;
         height: 100%;

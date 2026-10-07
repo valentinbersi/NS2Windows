@@ -1,68 +1,16 @@
 <script lang="ts">
-    import {
-        DEFAULT_FRONT_NSO_GC_PS4,
-        DEFAULT_FRONT_PS4,
-        DEFAULT_FRONT_SIDEWAYS_LEFT_JOY_CON_PS4,
-        DEFAULT_FRONT_SIDEWAYS_RIGHT_JOY_CON_PS4,
-        DEFAULT_NSO_GC_XBOX,
-        DEFAULT_SIDEWAYS_LEFT_JOY_CON_XBOX,
-        DEFAULT_SIDEWAYS_RIGHT_JOY_CON_XBOX,
-        DEFAULT_UPRIGHT_NSO_GC_PS4,
-        DEFAULT_UPRIGHT_PS4,
-        DEFAULT_UPRIGHT_SIDEWAYS_LEFT_JOY_CON_PS4,
-        DEFAULT_UPRIGHT_SIDEWAYS_RIGHT_JOY_CON_PS4,
-        DEFAULT_XBOX,
-        type Profile,
-        ProfileKind
-    } from "../types";
+    import {type Profile, ProfileKind} from "../types";
+    import {createDefaultProfile, type PhysicalSetup, type MotionOrientation} from "../defaultProfiles";
 
     export let currentKind: ProfileKind;
     export let onAccept: (profile: Profile) => void;
     export let onCancel: () => void;
 
-    type PhysicalSetup = "standard" | "nso_gc" | "left_joycon" | "right_joycon";
-    type Orientation = "upright" | "front";
-
     let physicalSetup: PhysicalSetup = "standard";
-    let orientation: Orientation = "upright";
+    let orientation: MotionOrientation = "upright";
 
     function handleApply() {
-        let selectedProfile: Profile;
-
-        if (currentKind === ProfileKind.Xbox360) {
-            switch (physicalSetup) {
-                case "standard":
-                    selectedProfile = DEFAULT_XBOX;
-                    break;
-                case "nso_gc":
-                    selectedProfile = DEFAULT_NSO_GC_XBOX;
-                    break;
-                case "left_joycon":
-                    selectedProfile = DEFAULT_SIDEWAYS_LEFT_JOY_CON_XBOX;
-                    break;
-                case "right_joycon":
-                    selectedProfile = DEFAULT_SIDEWAYS_RIGHT_JOY_CON_XBOX;
-                    break;
-            }
-        } else {
-            // PS4
-            switch (physicalSetup) {
-                case "standard":
-                    selectedProfile = orientation === "upright" ? DEFAULT_UPRIGHT_PS4 : DEFAULT_FRONT_PS4;
-                    break;
-                case "nso_gc":
-                    selectedProfile = orientation === "upright" ? DEFAULT_UPRIGHT_NSO_GC_PS4 : DEFAULT_FRONT_NSO_GC_PS4;
-                    break;
-                case "left_joycon":
-                    selectedProfile = orientation === "upright" ? DEFAULT_UPRIGHT_SIDEWAYS_LEFT_JOY_CON_PS4 : DEFAULT_FRONT_SIDEWAYS_LEFT_JOY_CON_PS4;
-                    break;
-                case "right_joycon":
-                    selectedProfile = orientation === "upright" ? DEFAULT_UPRIGHT_SIDEWAYS_RIGHT_JOY_CON_PS4 : DEFAULT_FRONT_SIDEWAYS_RIGHT_JOY_CON_PS4;
-                    break;
-            }
-        }
-
-        onAccept(selectedProfile);
+        onAccept(createDefaultProfile(currentKind, physicalSetup, orientation));
     }
 </script>
 
@@ -86,7 +34,6 @@
             </select>
         </div>
 
-        {#if currentKind === ProfileKind.Ps4}
             <div class="form-group">
                 <label for="orientation">Motion Orientation</label>
                 <select id="orientation" bind:value={orientation}>
@@ -94,7 +41,6 @@
                     <option value="front">Front-facing (Pointing Forward)</option>
                 </select>
             </div>
-        {/if}
 
         <div class="modal-actions">
             <button class="secondary" on:click={onCancel}>Cancel</button>
