@@ -1,9 +1,12 @@
+use crate::cemuhook::{CemuHookServer, DEFAULT_ADDRESS, DEFAULT_PORT, endpoint};
 use crate::commands::connections::{connect_controller, disconnect_controller, set_controller_led};
 use crate::commands::controllers::{start_controller, stop_controller};
 use crate::commands::profiles::{
     delete_profile, find_profile_by_name, profile_names, save_profile,
 };
-use crate::commands::settings::{update_display_frequency, update_emulation_frequency};
+use crate::commands::settings::{
+    update_cemuhook_settings, update_display_frequency, update_emulation_frequency,
+};
 use crate::communication::communicator::BluetoothCommunicator;
 use crate::connection::connector::BluetoothConnector;
 use crate::repositories::profile_repository::ProfileRepository;
@@ -20,6 +23,7 @@ use tauri::{App, AppHandle, Manager as TManager, RunEvent};
 use tauri_plugin_store::StoreExt;
 use vigem_rust::Client;
 
+pub mod cemuhook;
 pub mod commands;
 pub mod communication;
 pub mod connection;
@@ -62,11 +66,37 @@ fn setup(app: &mut App) -> Result<(), Box<dyn Error>> {
     let vigem_client = Client::connect()?;
 
     let store = app.store("settings.json")?;
+    let profile_repository = ProfileRepository::new(db);
+    let backfill_completed = store
+        .get("xbox_motion_backfill_version")
+        .and_then(|value| value.as_u64())
+        .is_some_and(|version| version >= 1);
+    if tauri::async_runtime::block_on(
+        profile_repository.backfill_xbox_motion_defaults(backfill_completed),
+    )? {
+        store.set("xbox_motion_backfill_version", 1);
+        store.save()?;
+    }
+
+    let address = store
+        .get("cemuhook_address")
+        .and_then(|value| value.as_str().map(str::to_owned))
+        .unwrap_or_else(|| DEFAULT_ADDRESS.into());
+    let port = store
+        .get("cemuhook_port")
+        .and_then(|value| value.as_u64())
+        .filter(|port| (1..=65535).contains(port))
+        .map(|port| port as u16)
+        .unwrap_or(DEFAULT_PORT);
+    let bind_endpoint = endpoint(&address, port)
+        .unwrap_or_else(|_| endpoint(DEFAULT_ADDRESS, DEFAULT_PORT).unwrap());
+    store.set("cemuhook_address", bind_endpoint.ip().to_string());
+    store.set("cemuhook_port", bind_endpoint.port());
 
     let display_frequency = store
         .get("display_frequency")
         .and_then(|value| value.as_u64())
-        .take_if(|value| *value <= u16::MAX as u64)
+        .take_if(|value| (1..=u16::MAX as u64).contains(value))
         .map(|value| value as u16)
         .map(AtomicU16::new)
         .map(Arc::new)
@@ -78,7 +108,7 @@ fn setup(app: &mut App) -> Result<(), Box<dyn Error>> {
     let emulation_frequency = store
         .get("emulation_frequency")
         .and_then(|value| value.as_u64())
-        .take_if(|value| *value <= u16::MAX as u64)
+        .take_if(|value| (1..=u16::MAX as u64).contains(value))
         .map(|value| value as u16)
         .map(AtomicU16::new)
         .map(Arc::new)
@@ -88,13 +118,16 @@ fn setup(app: &mut App) -> Result<(), Box<dyn Error>> {
         });
 
     app.manage(AppState::new(
-        ProfileRepository::new(db),
+        profile_repository,
         BluetoothConnector::new(adapter),
         BluetoothCommunicator,
         vigem_client,
         display_frequency,
         emulation_frequency,
+        CemuHookServer::new(bind_endpoint),
     ));
+
+    store.save()?;
 
     Ok(())
 }
@@ -134,6 +167,7 @@ pub fn run() -> tauri::Result<()> {
             profile_names,
             update_display_frequency,
             update_emulation_frequency,
+            update_cemuhook_settings,
         ])
         .setup(setup)
         .build(tauri::generate_context!())?
