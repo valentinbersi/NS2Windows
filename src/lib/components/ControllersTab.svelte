@@ -1,8 +1,8 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
-    import { ControllerKind } from "../types";
-    import type { Connection, VirtualControllerState, EmulatedController } from "../types";
+    import { ControllerKind, ProfileKind } from "../types";
+    import type { Connection, VirtualControllerState, EmulatedController, Profile, MotionOutput, NsConnectedController } from "../types";
     import { connections, renameConnection, virtualControllers } from "../stores";
     
     import JoyConLeftIcon from "./icons/JoyConLeftIcon.svelte";
@@ -11,6 +11,8 @@
     import GcControllerIcon from "./icons/GcControllerIcon.svelte";
 
     let profiles: string[] = [];
+    let profileKinds: Record<string, ProfileKind> = {};
+    let profileError = "";
     let nameDrafts: Record<string, string> = {};
     let nameErrors: Record<string, string> = {};
 
@@ -20,8 +22,14 @@
     async function loadData() {
         try {
             profiles = await invoke<string[]>("profile_names");
+            const loaded = await Promise.all(profiles.map(name => invoke<Profile | null>("find_profile_by_name", {name})));
+            profileKinds = Object.fromEntries(loaded.filter((profile): profile is Profile => profile !== null).map(profile => [profile.name, profile.kind]));
+            $virtualControllers = $virtualControllers.map(vc => !vc.is_running && !vc.is_busy && vc.profile_name && profileKinds[vc.profile_name] === ProfileKind.Xbox360
+                ? {...vc, motion_output: "CemuHook"} : vc);
+            profileError = "";
         } catch (e) {
             console.error("Failed to load profiles", e);
+            profileError = "Could not load profiles. Return to this tab to retry.";
         }
     }
 
@@ -82,20 +90,23 @@
             profile_name: null,
             bound_controllers: [],
             is_running: false,
+            is_busy: false,
             emulated_controller_id: null,
-            motion_source: "Right"
+            motion_source: "Right",
+            motion_output: "ViGEm"
         };
         $virtualControllers = [...$virtualControllers, newVc];
     }
 
     function removeVirtualController(id: string) {
-        $virtualControllers = $virtualControllers.filter(vc => vc.id !== id);
+        $virtualControllers = $virtualControllers.filter(vc => vc.id !== id || vc.is_running || vc.is_busy);
         if (selectingForVcId === id) {
             selectingForVcId = null;
         }
     }
 
     function openSelectionModal(vcId: string) {
+        if ($virtualControllers.some(vc => vc.id === vcId && (vc.is_running || vc.is_busy))) return;
         selectingForVcId = vcId;
     }
 
@@ -109,7 +120,7 @@
         $virtualControllers = $virtualControllers.map(vc => {
             if (vc.id === selectingForVcId) {
                 // Cannot bind if running
-                if (vc.is_running) return vc;
+                if (vc.is_running || vc.is_busy) return vc;
 
                 // Check if we can bind
                 if (vc.bound_controllers.length >= 2) return vc; // full
@@ -132,7 +143,7 @@
 
     function unbindController(vcId: string, connId: string) {
         $virtualControllers = $virtualControllers.map(vc => {
-            if (vc.id === vcId) {
+            if (vc.id === vcId && !vc.is_running && !vc.is_busy) {
                 return { ...vc, bound_controllers: vc.bound_controllers.filter(c => c.id !== connId) };
             }
             return vc;
@@ -141,33 +152,41 @@
 
     function setProfile(vcId: string, profileName: string) {
         $virtualControllers = $virtualControllers.map(vc => 
-            vc.id === vcId ? { ...vc, profile_name: profileName } : vc
+            vc.id === vcId && !vc.is_running && !vc.is_busy ? {
+                ...vc, profile_name: profileName,
+                motion_output: profileKinds[profileName] === ProfileKind.Xbox360 ? "CemuHook" : "ViGEm"
+            } : vc
         );
     }
 
     function setMotionSource(vcId: string, source: "Left" | "Right") {
         $virtualControllers = $virtualControllers.map(vc => 
-            vc.id === vcId ? { ...vc, motion_source: source } : vc
+            vc.id === vcId && !vc.is_running && !vc.is_busy ? { ...vc, motion_source: source } : vc
         );
     }
 
+    function setMotionOutput(vcId: string, output: MotionOutput) {
+        $virtualControllers = $virtualControllers.map(vc => vc.id === vcId && !vc.is_running && !vc.is_busy
+            && !(output === "ViGEm" && vc.profile_name && profileKinds[vc.profile_name] === ProfileKind.Xbox360)
+            ? {...vc, motion_output: output} : vc);
+    }
+
     async function toggleEmulation(vc: VirtualControllerState) {
-        if (vc.is_running) {
-            // Stop
-            try {
+        const current = $virtualControllers.find(v => v.id === vc.id);
+        if (!current || current.is_busy) return;
+        vc = current;
+        $virtualControllers = $virtualControllers.map(v => v.id === vc.id ? {...v, is_busy: true} : v);
+        try {
+            if (vc.is_running) {
                 await invoke("stop_controller", { emulatedControllerId: vc.emulated_controller_id });
                 $virtualControllers = $virtualControllers.map(v => 
                     v.id === vc.id ? { ...v, is_running: false, emulated_controller_id: null } : v
                 );
-            } catch (e) {
-                console.error(e);
-                alert("Failed to stop emulation: " + e);
+                return;
             }
-        } else {
-            // Start
-            if (!vc.profile_name || vc.bound_controllers.length === 0) return;
+            if (!vc.profile_name || !profileKinds[vc.profile_name] || vc.bound_controllers.length === 0) return;
             
-            let connected_controller: any;
+            let connected_controller: NsConnectedController;
             if (vc.bound_controllers.length === 1) {
                 connected_controller = { SingleController: { id: vc.bound_controllers[0].id } };
             } else if (vc.bound_controllers.length === 2) {
@@ -181,22 +200,29 @@
                         motion_source: vc.motion_source 
                     } 
                 };
-            }
+            } else return;
 
             const payload: EmulatedController = {
                 profile_name: vc.profile_name,
-                connected_controller
+                connected_controller,
+                motion_output: vc.motion_output
             };
 
-            try {
-                const uuid = await invoke<string>("start_controller", { controller: payload });
-                $virtualControllers = $virtualControllers.map(v => 
-                    v.id === vc.id ? { ...v, is_running: true, emulated_controller_id: uuid } : v
-                );
-            } catch (e) {
-                console.error(e);
-                alert("Failed to start emulation: " + e);
+            const uuid = await invoke<string>("start_controller", { controller: payload });
+            const latest = $virtualControllers.find(v => v.id === vc.id);
+            if (!latest || !latest.is_busy || !vc.bound_controllers.every(bound =>
+                latest.bound_controllers.some(current => current.id === bound.id) && $connections.some(connection => connection.id === bound.id))) {
+                await invoke("stop_controller", {emulatedControllerId: uuid});
+                return;
             }
+            $virtualControllers = $virtualControllers.map(v =>
+                v.id === vc.id ? { ...v, is_running: true, emulated_controller_id: uuid } : v
+            );
+        } catch (e) {
+            console.error(e);
+            alert(`Failed to ${vc.is_running ? "stop" : "start"} emulation: ` + e);
+        } finally {
+            $virtualControllers = $virtualControllers.map(v => v.id === vc.id ? {...v, is_busy: false} : v);
         }
     }
 
@@ -256,6 +282,7 @@
         </div>
 
         <div class="vc-list">
+            {#if profileError}<p role="alert">{profileError}</p>{/if}
             {#if $virtualControllers.length === 0}
                 <div class="empty-msg">No virtual controllers yet. Add one to start.</div>
             {:else}
@@ -264,7 +291,7 @@
                         <div class="vc-header">
                             <select 
                                 value={vc.profile_name || ""} 
-                                disabled={vc.is_running}
+                                disabled={vc.is_running || vc.is_busy}
                                 on:change={(e) => setProfile(vc.id, e.currentTarget.value)}
                             >
                                 <option value="" disabled>Select a Profile</option>
@@ -274,18 +301,18 @@
                             </select>
                             <button 
                                 class="delete-btn" 
-                                disabled={vc.is_running} 
+                                disabled={vc.is_running || vc.is_busy}
                                 on:click={() => removeVirtualController(vc.id)}
                                 title="Delete Virtual Controller"
                             >✕</button>
                         </div>
 
-                        <div class="binding-zones" class:disabled={vc.is_running}>
+                        <div class="binding-zones" class:disabled={vc.is_running || vc.is_busy}>
                             {#each vc.bound_controllers as bound (bound.id)}
                                 <div class="bound-controller">
                                     <svelte:component this={getControllerIcon(bound.controller_kind)} width="48" height="48" />
                                     <span class="label">{bound.name}</span>
-                                    {#if !vc.is_running}
+                                    {#if !vc.is_running && !vc.is_busy}
                                         <button class="unbind-btn" on:click={() => unbindController(vc.id, bound.id)}>✕</button>
                                     {/if}
                                 </div>
@@ -293,12 +320,12 @@
 
                             {#if vc.bound_controllers.length === 0}
                                 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-                                <div class="drop-placeholder" on:click={() => !vc.is_running && openSelectionModal(vc.id)}>
+                                <div class="drop-placeholder" on:click={() => !vc.is_running && !vc.is_busy && openSelectionModal(vc.id)}>
                                     <div class="dashed-box">Click to select a controller</div>
                                 </div>
                             {:else if vc.bound_controllers.length === 1 && (vc.bound_controllers[0].controller_kind === ControllerKind.LeftJoyCon || vc.bound_controllers[0].controller_kind === ControllerKind.RightJoyCon)}
                                 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-                                <div class="drop-placeholder" on:click={() => !vc.is_running && openSelectionModal(vc.id)}>
+                                <div class="drop-placeholder" on:click={() => !vc.is_running && !vc.is_busy && openSelectionModal(vc.id)}>
                                     <div class="dashed-box">Click to select opposite Joy-Con</div>
                                 </div>
                             {/if}
@@ -310,26 +337,49 @@
                                 <div class="toggle-group">
                                     <button 
                                         class:active={vc.motion_source === "Left"} 
-                                        disabled={vc.is_running} 
+                                        disabled={vc.is_running || vc.is_busy}
+                                        aria-pressed={vc.motion_source === "Left"}
                                         on:click={() => setMotionSource(vc.id, "Left")}
                                     >Left</button>
                                     <button 
                                         class:active={vc.motion_source === "Right"} 
-                                        disabled={vc.is_running} 
+                                        disabled={vc.is_running || vc.is_busy}
+                                        aria-pressed={vc.motion_source === "Right"}
                                         on:click={() => setMotionSource(vc.id, "Right")}
                                     >Right</button>
                                 </div>
                             </div>
                         {/if}
 
+                        <div class="motion-toggle">
+                            <span>Motion Output:</span>
+                            <div class="toggle-group" role="group" aria-label="Motion output">
+                                <button class:active={vc.motion_output === "ViGEm"}
+                                    aria-pressed={vc.motion_output === "ViGEm"}
+                                    disabled={vc.is_running || vc.is_busy || !vc.profile_name || !profileKinds[vc.profile_name] || profileKinds[vc.profile_name] === ProfileKind.Xbox360}
+                                    on:click={() => setMotionOutput(vc.id, "ViGEm")}>ViGEm</button>
+                                <button class:active={vc.motion_output === "CemuHook"}
+                                    aria-pressed={vc.motion_output === "CemuHook"}
+                                    disabled={vc.is_running || vc.is_busy || !vc.profile_name || !profileKinds[vc.profile_name]}
+                                    on:click={() => setMotionOutput(vc.id, "CemuHook")}>CemuHook</button>
+                            </div>
+                        </div>
+                        {#if vc.profile_name && profileKinds[vc.profile_name] === ProfileKind.Xbox360}
+                            <p class="motion-help">Xbox 360 motion requires CemuHook. Configure its address and port in Settings.</p>
+                        {:else if vc.motion_output === "CemuHook"}
+                            <p class="motion-help">Choose this controller in your emulator’s CemuHook motion sources. Address and port are in Settings.</p>
+                        {/if}
+
                         <div class="vc-footer">
                             <button 
                                 class="start-stop-btn" 
                                 class:stop={vc.is_running}
-                                disabled={!vc.profile_name || vc.bound_controllers.length === 0}
+                                disabled={vc.is_busy || (!vc.is_running && (!vc.profile_name || !profileKinds[vc.profile_name] || vc.bound_controllers.length === 0))}
                                 on:click={() => toggleEmulation(vc)}
                             >
-                                {#if vc.is_running}
+                                {#if vc.is_busy}
+                                    {vc.is_running ? "Stopping..." : "Starting..."}
+                                {:else if vc.is_running}
                                     <span class="stop-icon">■</span> Stop Emulation
                                 {:else}
                                     <span class="start-icon">▶</span> Start Emulation
@@ -372,6 +422,11 @@
 {/if}
 
 <style>
+    .motion-help {
+        color: var(--text-muted);
+        font-size: 12px;
+        margin: 0 0 12px;
+    }
     .layout {
         display: flex;
         height: 100%;

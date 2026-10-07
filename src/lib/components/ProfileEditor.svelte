@@ -157,6 +157,9 @@
         <div class="mapping-section">
             <h3>Input Mapping</h3>
             <p class="subtitle">Map Nintendo Switch inputs to virtual {profile.kind} outputs.</p>
+            {#if profile.kind === ProfileKind.Xbox360}
+                <p class="subtitle">Acceleration and gyro mappings are reported through CemuHook.</p>
+            {/if}
 
             <div class="table-container">
                 <table>

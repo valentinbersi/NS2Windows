@@ -1,3 +1,4 @@
+use crate::dtos::motion_output::MotionOutput;
 use crate::dtos::ns_connected_controller::NsConnectedController;
 use serde::{Deserialize, Serialize};
 
@@ -5,4 +6,6 @@ use serde::{Deserialize, Serialize};
 pub struct EmulatedController {
     pub profile_name: String,
     pub connected_controller: NsConnectedController,
+    #[serde(default)]
+    pub motion_output: Option<MotionOutput>,
 }

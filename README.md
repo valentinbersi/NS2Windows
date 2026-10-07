@@ -74,6 +74,36 @@ start the emulation process, running all defined controllers in the background t
   </tr>
 </table>
 
+## Motion Output
+
+Before starting a virtual controller, choose **Motion Output: ViGEm** or **CemuHook** in the Controllers tab.
+PS4 profiles default to ViGEm. Xbox 360 profiles always use CemuHook for motion because Xbox 360 reports have no motion
+fields. Buttons, sticks, and supported rumble still use ViGEm in either mode. Paired Joy-Cons use the existing Left/Right
+Motion Source selection; their motion occupies one CemuHook slot.
+
+CemuHook sends the profile's acceleration and gyro mappings through a motion-only
+[DSU protocol v1001 server](https://v1993.github.io/cemuhook-protocol/). In CemuHook mode, PS4 ViGEm motion fields are zero.
+The server starts with the first CemuHook controller and stops with the last. It supports four simultaneous controllers,
+assigning the lowest available slot from 0 to 3. Stop a controller to free its slot. Discover the sources in your emulator
+and select the matching slot as its motion source; use ViGEm/XInput/DS4 for its regular inputs.
+
+Configure **CemuHook Bind Address** and **CemuHook Port** in Settings. Defaults are `127.0.0.1` and `26760`; enter the same
+endpoint in the emulator's CemuHook/DSU client. For a LAN client, bind to this PC's LAN IP (or `0.0.0.0`/`::` for all
+interfaces), then enter this PC's reachable IP in the client. IPv4 and IPv6 literals are supported; hostnames are not.
+Allow inbound UDP on the chosen port in Windows Firewall if needed for LAN access. Stop every CemuHook controller before
+changing the endpoint. Other Settings changes can still be applied while controllers run. If startup reports an occupied
+port, stop the other motion server or choose another port in both applications.
+
+Motion mappings can be edited for both profile types. Apply Defaults offers upright/front-facing motion orientation for
+Xbox profiles as well as PS4 profiles. Existing Xbox profiles receive missing motion mappings once on first launch after
+this feature is installed, using upright identity mappings; existing mappings, profile names, and IDs are preserved.
+Choose Apply Defaults for the appropriate setup/orientation when using a sideways Joy-Con. Later mapping removals remain
+removed. Motion-output selections last for the current app session; server settings persist across launches.
+
+Developer checks: `npm run check`, `npm run build`, `node --test tests/motion.test.mjs`, and
+`cargo test --locked` / `cargo check --locked` from `src-tauri`. The UDP tests use an actual local socket and DSU requests;
+physical-controller orientation and compatibility with a real emulator also require hardware validation.
+
 ## Dependencies
 
 - Windows PC with Bluetooth capabilities.
