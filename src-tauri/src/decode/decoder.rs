@@ -134,6 +134,59 @@ bitflags! {
     // }
 }
 
+#[cfg(test)]
+mod motion_tests {
+    use super::*;
+    use crate::data::output::Output;
+    use crate::data::profile_kind::ProfileKind;
+    use crate::evaluation::evaluator::Evaluator;
+    use crate::profiles::input::input::Input;
+    use crate::profiles::input::value_input::ValueInput;
+    use crate::profiles::profile::Profile;
+
+    #[test]
+    fn minimum_signed_sensor_value_does_not_overflow() {
+        let (positive, negative) = Decoder.decode_motion_axis(&i16::MIN.to_le_bytes());
+        assert_eq!(positive, 0.0);
+        assert_eq!(negative, 32768.0 / 16.384);
+    }
+
+    #[test]
+    fn paired_motion_selection_is_applied_before_profile_orientation() {
+        let mut left = vec![0u8; 64];
+        let mut right = vec![0u8; 64];
+        left[0x38..0x3a].copy_from_slice(&1000i16.to_le_bytes());
+        right[0x38..0x3a].copy_from_slice(&(-2000i16).to_le_bytes());
+        let profile = Profile::new(
+            "Orientation".into(),
+            ProfileKind::Xbox360,
+            [
+                (
+                    Output::GyroRollLeft,
+                    Input::Value(ValueInput::new(NsInput::GyroYawRight)),
+                ),
+                (
+                    Output::GyroRollRight,
+                    Input::Value(ValueInput::new(NsInput::GyroYawLeft)),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let left_input = Decoder.decode_dual_joy_cons(&left, &right, MotionSource::Left);
+        let right_input = Decoder.decode_dual_joy_cons(&left, &right, MotionSource::Right);
+        let left_output = Evaluator.evaluate_profile(&profile, &left_input);
+        let right_output = Evaluator.evaluate_profile(&profile, &right_input);
+        assert_eq!(left_output.get(Output::GyroRollLeft), Some(1000.0 / 16.384));
+        assert_eq!(left_output.get(Output::GyroRollRight), Some(0.0));
+        assert_eq!(right_output.get(Output::GyroRollLeft), Some(0.0));
+        assert_eq!(
+            right_output.get(Output::GyroRollRight),
+            Some(2000.0 / 16.384)
+        );
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Decoder;
 
@@ -403,7 +456,7 @@ impl Decoder {
         let axis_buffer = axis_buffer.try_into().unwrap();
         let axis = i16::from_le_bytes(axis_buffer);
         let positive = axis.clamp(0, i16::MAX) as f32 / 16.384;
-        let negative = -axis.clamp(i16::MIN, 0) as f32 / 16.384;
+        let negative = -(axis.clamp(i16::MIN, 0) as f32) / 16.384;
 
         (positive, negative)
     }
